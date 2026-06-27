@@ -475,12 +475,14 @@ def _get_local_ip() -> str:
 
 
 if __name__ == "__main__":
-    # Start the live Gmail watcher only in the reloader's worker process
-    # (avoids a duplicate watcher in the debug supervisor process).
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+    debug = os.getenv("FLASK_DEBUG", "0") == "1"
+    port  = int(os.getenv("PORT", "8080"))
+    # In debug mode the reloader forks two processes; only start the watcher in the child.
+    # In production (debug=False) there's only one process, so always start it.
+    if not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         try:
             from inbox_watcher import start_watcher
             start_watcher()
         except Exception as e:
             print(f"[inbox] failed to start watcher: {e}")
-    app.run(debug=True, port=8080, host="0.0.0.0")
+    app.run(debug=debug, port=port, host="0.0.0.0")
