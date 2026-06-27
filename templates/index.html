@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalehack — Investor Follow-Up</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; }
+
+    /* NAV */
+    nav { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    .logo { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+    .logo span { color: #0071e3; }
+    .nav-user { font-size: 13px; color: #6e6e73; display: flex; align-items: center; gap: 10px; }
+    .pill { background: #f0f0f0; border-radius: 20px; padding: 3px 10px; font-size: 12px; }
+    .pill.connected { background: #d1f5e0; color: #1a7a3c; }
+    .pill.disconnected { background: #fde8e8; color: #c0392b; }
+
+    /* LAYOUT */
+    .page { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+
+    /* SETUP MODAL */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal { background: #fff; border-radius: 18px; padding: 40px; width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+    .modal h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+    .modal p { font-size: 14px; color: #6e6e73; margin-bottom: 28px; }
+
+    /* FORMS */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #3a3a3c; margin-bottom: 6px; }
+    input[type="text"], input[type="email"], textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid #d2d2d7; border-radius: 10px;
+      font-size: 15px; outline: none; transition: border 0.15s;
+    }
+    input:focus, textarea:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.12); }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: 10px; border: none; font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #0071e3; color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-secondary { background: #f0f0f0; color: #1d1d1f; }
+    .btn-secondary:hover { background: #e5e5e5; }
+    .btn-danger { background: #ff3b30; color: #fff; }
+    .btn-full { width: 100%; justify-content: center; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* SECTION HEADERS */
+    .section-title { font-size: 13px; font-weight: 600; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+    /* TRACTION GRID */
+    .traction-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .traction-grid input { font-size: 14px; }
+
+    /* RUN BAR */
+    .run-bar { background: #fff; border-radius: 14px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .run-bar-left h2 { font-size: 18px; font-weight: 600; }
+    .run-bar-left p { font-size: 13px; color: #6e6e73; margin-top: 2px; }
+
+    /* LOADING */
+    .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESULTS */
+    #results { display: none; }
+    .results-header { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+
+    /* INVESTOR CARD */
+    .investor-card { background: #fff; border-radius: 14px; padding: 22px 24px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 4px solid transparent; }
+    .investor-card.high { border-left-color: #ff3b30; }
+    .investor-card.medium { border-left-color: #ff9500; }
+    .investor-card.low { border-left-color: #34c759; }
+    .investor-card.wait { border-left-color: #8e8e93; }
+
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+    .card-firm { font-size: 17px; font-weight: 600; }
+    .card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .badge-follow-up { background: #fff0e6; color: #c45000; }
+    .badge-wait { background: #f0f0f0; color: #6e6e73; }
+    .badge-no-action { background: #f0f0f0; color: #6e6e73; }
+    .badge-high { background: #ffe5e5; color: #c0392b; }
+    .badge-medium { background: #fff3e0; color: #a05000; }
+    .badge-low { background: #e8f8ed; color: #1a7a3c; }
+
+    .card-reason { font-size: 14px; color: #6e6e73; margin-bottom: 14px; line-height: 1.5; }
+    .card-last { font-size: 12px; color: #aeaeb2; margin-bottom: 14px; }
+
+    /* DRAFT */
+    .draft-box { background: #f5f5f7; border-radius: 10px; padding: 16px; margin-top: 12px; }
+    .draft-label { font-size: 12px; font-weight: 600; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .draft-text { font-size: 14px; line-height: 1.7; color: #1d1d1f; white-space: pre-wrap; }
+    .copy-btn { font-size: 12px; padding: 4px 10px; background: #e5e5e5; border: none; border-radius: 6px; cursor: pointer; color: #3a3a3c; transition: background 0.15s; }
+    .copy-btn:hover { background: #d2d2d7; }
+    .copy-btn.copied { background: #d1f5e0; color: #1a7a3c; }
+
+    /* MEMORIES */
+    .memories { margin-top: 12px; }
+    .memory-item { font-size: 13px; color: #6e6e73; padding: 6px 0; border-top: 1px solid #f0f0f0; line-height: 1.5; }
+    .memory-item:first-child { border-top: none; }
+    .mem-tier { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .mem-tier.hot { background: #ff3b30; }
+    .mem-tier.warm { background: #ff9500; }
+    .mem-tier.cold { background: #8e8e93; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 60px 20px; color: #8e8e93; }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty p { font-size: 15px; }
+
+    /* CONNECT GMAIL BANNER */
+    .banner { background: #fff8e7; border: 1px solid #ffe082; border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; font-size: 14px; }
+    .banner a { color: #0071e3; text-decoration: none; font-weight: 500; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1d1d1f; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; z-index: 200; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">scale<span>hack</span></div>
+  <div class="nav-user" id="nav-user">
+    {% if profile.get('email') %}
+      <span>{{ profile.get('name', profile.get('email')) }}</span>
+      <span class="pill" id="gmail-pill">checking...</span>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- SETUP MODAL -->
+{% if not profile.get('email') %}
+<div class="modal-backdrop" id="setup-modal">
+  <div class="modal">
+    <h2>Welcome to Scalehack</h2>
+    <p>Enter your details to connect your Gmail and start tracking investor follow-ups.</p>
+    <div class="form-group">
+      <label>Your name</label>
+      <input type="text" id="setup-name" placeholder="Akshat" />
+    </div>
+    <div class="form-group">
+      <label>Your email</label>
+      <input type="email" id="setup-email" placeholder="you@startup.com" />
+    </div>
+    <button class="btn btn-primary btn-full" onclick="submitSetup()">Continue →</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- MAIN PAGE -->
+<div class="page">
+
+  <!-- GMAIL BANNER (shown if not connected) -->
+  <div class="banner" id="gmail-banner" style="display:none">
+    ⚠️ Gmail isn't connected yet.
+    <a href="#" onclick="connectGmail(); return false">Connect Gmail →</a>
+  </div>
+
+  <!-- RUN BAR -->
+  <div class="run-bar">
+    <div class="run-bar-left">
+      <h2>Morning Investor Brief</h2>
+      <p>Pull latest emails, reason over your pipeline, draft follow-ups.</p>
+    </div>
+    <button class="btn btn-primary" id="run-btn" onclick="runMorningJob()">
+      Run Brief
+    </button>
+  </div>
+
+  <!-- TRACTION INPUTS -->
+  <div class="section-title">Current Traction (optional — used in drafts)</div>
+  <div class="traction-grid">
+    <div class="form-group">
+      <label>MRR</label>
+      <input type="text" id="t-mrr" placeholder="e.g. $54k (was $31k, +74%)" />
+    </div>
+    <div class="form-group">
+      <label>Enterprise Pilots</label>
+      <input type="text" id="t-pilots" placeholder="e.g. 4 (was 1)" />
+    </div>
+    <div class="form-group">
+      <label>Usage Growth</label>
+      <input type="text" id="t-usage" placeholder="e.g. +42% MoM" />
+    </div>
+    <div class="form-group">
+      <label>Churn</label>
+      <input type="text" id="t-churn" placeholder="e.g. 3% (was 6%)" />
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="results-header" id="results-title"></div>
+    <div id="cards-container"></div>
+  </div>
+
+  <div id="empty-state" class="empty" style="display:none">
+    <div class="empty-icon">📭</div>
+    <p>No investor threads found yet.<br>Make sure Gmail is connected and investor domains are configured.</p>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // Check Gmail connection on load
+  {% if profile.get('email') %}
+  checkGmailStatus();
+  {% endif %}
+
+  async function checkGmailStatus() {
+    const res = await fetch('/api/auth-status');
+    const data = await res.json();
+    const pill = document.getElementById('gmail-pill');
+    const banner = document.getElementById('gmail-banner');
+    if (data.connected) {
+      pill.textContent = 'Gmail connected';
+      pill.className = 'pill connected';
+    } else {
+      pill.textContent = 'Gmail not connected';
+      pill.className = 'pill disconnected';
+      if (banner) banner.style.display = 'flex';
+    }
+  }
+
+  async function connectGmail() {
+    const res = await fetch('/api/connect-gmail');
+    const data = await res.json();
+    if (data.url) {
+      window.open(data.url, '_blank');
+      showToast('Auth page opened — complete the flow and refresh.');
+    } else {
+      showToast('Error: ' + (data.error || 'unknown'));
+    }
+  }
+
+  async function submitSetup() {
+    const name = document.getElementById('setup-name').value.trim();
+    const email = document.getElementById('setup-email').value.trim();
+    if (!email) { showToast('Email is required'); return; }
+    const res = await fetch('/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    });
+    if (res.ok) { window.location.reload(); }
+    else { showToast('Something went wrong'); }
+  }
+
+  async function runMorningJob() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Running...';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'none';
+
+    const payload = {
+      mrr: document.getElementById('t-mrr').value,
+      pilots: document.getElementById('t-pilots').value,
+      usage: document.getElementById('t-usage').value,
+      churn: document.getElementById('t-churn').value,
+    };
+
+    try {
+      const res = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.error) { showToast('Error: ' + data.error); return; }
+      renderResults(data.results);
+    } catch (e) {
+      showToast('Failed to run: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Run Brief';
+    }
+  }
+
+  function renderResults(results) {
+    const container = document.getElementById('cards-container');
+    const title = document.getElementById('results-title');
+    container.innerHTML = '';
+
+    if (!results || results.length === 0) {
+      document.getElementById('empty-state').style.display = 'block';
+      return;
+    }
+
+    const followUps = results.filter(r => r.action === 'follow_up').length;
+    title.textContent = `${results.length} firms reviewed · ${followUps} follow-up${followUps !== 1 ? 's' : ''} recommended`;
+    document.getElementById('results').style.display = 'block';
+
+    results.forEach((r, i) => {
+      const card = document.createElement('div');
+      const cardClass = r.action === 'follow_up' ? r.urgency : 'wait';
+      card.className = `investor-card ${cardClass}`;
+
+      const actionBadge = r.action === 'follow_up'
+        ? `<span class="badge badge-follow-up">Follow up</span>`
+        : r.action === 'wait'
+        ? `<span class="badge badge-wait">Wait</span>`
+        : `<span class="badge badge-no-action">No action</span>`;
+
+      const urgencyBadge = r.action === 'follow_up'
+        ? `<span class="badge badge-${r.urgency}">${r.urgency}</span>`
+        : '';
+
+      const lastContact = r.last_contact
+        ? `<div class="card-last">Last contact: ${r.last_contact}</div>`
+        : '';
+
+      const memoriesHtml = r.memories && r.memories.length
+        ? `<div class="memories">${r.memories.map(m => `
+            <div class="memory-item">
+              <span class="mem-tier ${m.tier}"></span>
+              <span>${m.snippet || '(no snippet)'}</span>
+            </div>`).join('')}</div>`
+        : '';
+
+      const draftHtml = r.draft
+        ? `<div class="draft-box">
+            <div class="draft-label">
+              Draft email
+              <button class="copy-btn" onclick="copyDraft(this, ${i})">Copy</button>
+            </div>
+            <div class="draft-text" id="draft-${i}">${escapeHtml(r.draft)}</div>
+           </div>`
+        : '';
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-firm">${r.firm}</div>
+          <div class="card-meta">${actionBadge} ${urgencyBadge}</div>
+        </div>
+        ${lastContact}
+        <div class="card-reason">${r.reason}</div>
+        ${memoriesHtml}
+        ${draftHtml}
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function copyDraft(btn, i) {
+    const text = document.getElementById(`draft-${i}`).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.className = 'copy-btn copied';
+      setTimeout(() => { btn.textContent = 'Copy'; btn.className = 'copy-btn'; }, 2000);
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // Allow pressing Enter to submit setup
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('setup-modal')) submitSetup();
+  });
+</script>
+</body>
+</html>
