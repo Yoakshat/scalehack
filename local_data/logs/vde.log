@@ -1,0 +1,17 @@
+[2026-06-27 17:39:35.793] [vde] [info] Data store configure CACHE_SIZE_MB succeeded
+[2026-06-27 17:39:35.793] [vde] [info] Data store configure DATADIR succeeded (/var/lib/actian-vectorai)
+[2026-06-27 17:39:35.793] [vde] [info] Data store configure INI succeeded (/var/lib/actian-vectorai/datastore.ini)
+[2026-06-27 17:39:35.848] [vde] [info] Data store initialization succeeded
+[2026-06-27 17:39:35.848] [vde] [info] VDE Engine initializing with engine_path: /var/lib/actian-vectorai
+[2026-06-27 17:39:35.852] [vde] [info] [GlobalVectorsCounter::Open] counter.btr open miss/fail (status=12), creating /var/lib/actian-vectorai/collections/counter.btr
+[2026-06-27 17:39:35.856] [vde] [info] [GlobalVectorsCounter::CreateFileStore] Created counter.btr with key index: /var/lib/actian-vectorai/collections/counter.btr
+[2026-06-27 17:39:35.856] [vde] [info] [FlushManager] Started (check_interval=30s, min_threshold=100, max_interval=3600s)
+[2026-06-27 17:39:35.856] [vde] [info] VectorIndexRegistry and VectorRepositoryRegistry created
+[2026-06-27 17:39:35.856] [vde] [info] [LicenseEnforcement] Started.  allowed=5000, current=0, blocked=no
+[2026-06-27 17:39:35.856] [vde] [info] [VDEEngine::ListCollections] Listing all collections
+[2026-06-27 17:39:35.857] [vde] [info] [VDEEngine::ListCollections] Found 0 collections
+[2026-06-27 17:39:35.880] [vde] [info] [LicenseEnforcement::refreshAllowedCount] prev_allowed=5000, new_allowed=5000, current=0, was_blocked=no, now_blocked=no
+[2026-06-27 17:41:26.942] [vde] [info] [ElsAddLicense] License entry added for '4V4H9BFGXQ...'
+[2026-06-27 17:41:28.876] [vde] [info] [LicenseManager::addLicense] License added for product key '4V4H9BFGXQ...'. Triggering enforcement recheck.
+[2026-06-27 17:41:28.877] [vde] [info] [LicenseEnforcement::refreshAllowedCount] prev_allowed=5000, new_allowed=1000000, current=0, was_blocked=no, now_blocked=no
+[2026-06-27 17:41:28.878] [vde] [info] [LicenseManager::addLicense] Enforcement recheck complete. allowed=1000000, blocked=no

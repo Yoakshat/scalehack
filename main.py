@@ -35,8 +35,9 @@ def cmd_run(send: bool = False):
         "Churn": "3% (was 6%)",
     }
 
+    from profile import get_founder_name
     from morning_job import run_morning_job
-    run_morning_job(traction=traction, founder_name="Akshat", dry_run=not send)
+    run_morning_job(traction=traction, founder_name=get_founder_name(), dry_run=not send)
 
 
 def cmd_add_email(addr: str):

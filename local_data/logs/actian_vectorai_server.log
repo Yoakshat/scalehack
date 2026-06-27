@@ -1,0 +1,29 @@
+[2026-06-27 17:39:35.788] [actian_vectorai] [info] Actian VectorAI DB gRPC Server starting...
+[2026-06-27 17:39:35.789] [actian_vectorai] [info] ========================================
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   Actian VectorAI DB gRPC Server v1.0.1
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   Vector Search Service powered by VDE
+[2026-06-27 17:39:35.789] [actian_vectorai] [info] ========================================
+[2026-06-27 17:39:35.789] [actian_vectorai] [info] Configuration:
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   Server address:  0.0.0.0:6574
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   RESTful port:    6573
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   VDE engine path: /var/lib/actian-vectorai
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   Use transaction: true
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   Cache size:      engine default
+[2026-06-27 17:39:35.789] [actian_vectorai] [info]   Run mode:        service
+[2026-06-27 17:39:35.791] [actian_vectorai] [info] [VDE C++ API] Creating engine with work_dir: /var/lib/actian-vectorai
+[2026-06-27 17:39:35.857] [actian_vectorai] [info] [VDE C++ API] Engine created successfully
+[2026-06-27 17:39:35.880] [actian_vectorai] [info] Current vector usage: 0
+[2026-06-27 17:39:35.880] [actian_vectorai] [warning] No active licenses found
+[2026-06-27 17:39:35.881] [actian_vectorai] [info] Server parameter store not found, creating /var/lib/actian-vectorai/server_params.btr
+[2026-06-27 17:39:35.883] [actian_vectorai] [info] Generated user Argon2 salt and persisted it to server_params.btr
+[2026-06-27 17:39:35.883] [actian_vectorai] [info] Generated JWT secret and persisted it to server_params.btr
+[2026-06-27 17:39:35.885] [actian_vectorai] [info] Auth user store not found, creating /var/lib/actian-vectorai/auth/users.btr
+[2026-06-27 17:39:35.887] [actian_vectorai] [info] Access token store not found, creating /var/lib/actian-vectorai/auth/access_tokens.btr
+[2026-06-27 17:39:35.889] [actian_vectorai] [info] auth_enabled not found in server_params.btr for gRPC access control, defaulting to false
+[2026-06-27 17:39:35.889] [actian_vectorai] [info] Creating Actian VectorAI DB service implementation
+[2026-06-27 17:39:35.889] [actian_vectorai] [info] Actian VectorAI DB service implementation created (11 services)
+[2026-06-27 17:39:35.892] [actian_vectorai] [info] Restful API server initialized on port 6573
+[2026-06-27 17:39:35.892] [actian_vectorai] [info] auth_enabled not found in server_params.btr, defaulting to false
+[2026-06-27 17:39:35.893] [actian_vectorai] [info] Building gRPC server...
+[2026-06-27 17:39:35.896] [actian_vectorai] [info] Actian VectorAI DB gRPC Server listening on 0.0.0.0:6574
+[2026-06-27 17:39:35.896] [actian_vectorai] [info] Ready to accept connections...

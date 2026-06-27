@@ -2,8 +2,9 @@ import webbrowser
 from scalekit import ScalekitClient
 from config import (
     SCALEKIT_ENV_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET,
-    GMAIL_CONNECTION_NAME, FOUNDER_EMAIL
+    GMAIL_CONNECTION_NAME,
 )
+from profile import require_profile
 
 _client: ScalekitClient | None = None
 
@@ -16,10 +17,13 @@ def get_client() -> ScalekitClient:
 
 def ensure_gmail_connected() -> bool:
     """Returns True if Gmail is active, otherwise opens OAuth URL and returns False."""
+    profile = require_profile()
+    identifier = profile["email"]
     client = get_client()
+
     account = client.actions.get_or_create_connected_account(
         connection_name=GMAIL_CONNECTION_NAME,
-        identifier=FOUNDER_EMAIL,
+        identifier=identifier,
     )
     ca = account.connected_account
     status = ca.status if ca else None
@@ -28,7 +32,7 @@ def ensure_gmail_connected() -> bool:
         return True
 
     link = client.actions.get_authorization_link(
-        identifier=FOUNDER_EMAIL,
+        identifier=identifier,
         connection_name=GMAIL_CONNECTION_NAME,
     )
     print(f"\nGmail not connected. Opening auth URL...\n{link.url}\n")
@@ -36,12 +40,20 @@ def ensure_gmail_connected() -> bool:
     return False
 
 
+def _get_identifier() -> str:
+    from profile import get_founder_email
+    email = get_founder_email()
+    if not email:
+        raise RuntimeError("No founder profile. Run: python main.py auth")
+    return email
+
+
 def fetch_emails(query: str = "", max_results: int = 50) -> list[dict]:
     """Fetch emails matching query. Returns list of email dicts."""
     client = get_client()
     response = client.actions.execute_tool(
         tool_name="gmail_fetch_mails",
-        identifier=FOUNDER_EMAIL,
+        identifier=_get_identifier(),
         connection_name=GMAIL_CONNECTION_NAME,
         tool_input={"query": query, "max_results": max_results},
     )
@@ -73,7 +85,7 @@ def create_draft(to: str, subject: str, body: str) -> dict:
     client = get_client()
     response = client.actions.execute_tool(
         tool_name="gmail_create_draft",
-        identifier=FOUNDER_EMAIL,
+        identifier=_get_identifier(),
         connection_name=GMAIL_CONNECTION_NAME,
         tool_input={"to": to, "subject": subject, "body": body},
     )
