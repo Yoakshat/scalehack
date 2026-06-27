@@ -18,7 +18,7 @@ def save_profile(data: dict):
 
 
 def get_founder_email() -> str | None:
-    return load_profile().get("email")
+    return load_profile().get("email") or os.getenv("FOUNDER_EMAIL")
 
 
 def set_founder_email(email: str):
