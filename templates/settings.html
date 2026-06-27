@@ -100,6 +100,26 @@ input:focus{border-color:var(--gold-line)}
     </div>
   </div>
 
+  <!-- GOOGLE SHEETS -->
+  <div class="section">
+    <div class="section-title">Google Sheets</div>
+    <div class="row">
+      <div class="row-label">
+        <h3>Google Sheets</h3>
+        <p>Reads your startup metrics spreadsheets to ground AI recommendations in real traction data</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="status-badge {{ 'on' if sheets_connected else 'off' }}" id="sheets-badge">
+          <span class="dot"></span>
+          {{ 'Connected' if sheets_connected else 'Not connected' }}
+        </span>
+        {% if not sheets_connected %}
+        <button class="btn btn-connect" id="connect-sheets-btn" onclick="connectSheets()">Connect</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- PERMISSIONS -->
   <div class="section">
     <div class="section-title">Send Permissions</div>
@@ -147,6 +167,21 @@ async function connectCalendar() {
   const btn = document.getElementById('connect-cal-btn');
   if (btn) { btn.textContent = 'Connecting...'; btn.disabled = true; }
   const res  = await fetch('/api/connect-calendar');
+  const data = await res.json();
+  if (data.url) {
+    window.open(data.url, '_blank');
+    toast('Auth page opened — complete the flow and refresh.');
+    if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
+  } else {
+    toast('Error: ' + (data.error || 'unknown'));
+    if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
+  }
+}
+
+async function connectSheets() {
+  const btn = document.getElementById('connect-sheets-btn');
+  if (btn) { btn.textContent = 'Connecting...'; btn.disabled = true; }
+  const res  = await fetch('/api/connect-sheets');
   const data = await res.json();
   if (data.url) {
     window.open(data.url, '_blank');

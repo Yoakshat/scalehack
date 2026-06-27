@@ -121,6 +121,16 @@ input:focus{border-color:var(--gold-line)}
 .firm-input{width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--gold);font-size:13px;font-weight:600;margin-bottom:8px;outline:none;font-family:inherit}
 .firm-textarea{width:100%;min-height:160px;padding:13px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;line-height:1.65;outline:none;resize:vertical;font-family:inherit}
 .firm-input:focus,.firm-textarea:focus{border-color:var(--gold-line)}
+/* ATTRIBUTION */
+.attribution{margin-top:16px;display:flex;flex-direction:column;gap:6px}
+.attr-chip{display:flex;align-items:flex-start;gap:8px;padding:8px 11px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:12px}
+.attr-icon{flex:none;width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.attr-icon.gmail{background:rgba(200,168,106,.14);color:var(--gold)}
+.attr-icon.memory{background:rgba(255,255,255,.06);color:var(--muted)}
+.attr-icon.googlesheets{background:rgba(100,180,120,.14);color:#6db882}
+.attr-icon.sheets{background:rgba(100,180,120,.14);color:#6db882}
+.attr-name{font-weight:600;color:var(--ink);margin-right:4px}
+.attr-snippet{color:var(--muted);line-height:1.45}
 </style>
 </head>
 <body>
@@ -313,9 +323,22 @@ async function openFirm(firmId, firmName) {
 }
 function closeFirm() { document.getElementById('firm-overlay').classList.remove('open'); currentFirm = null; }
 
+const ATTR_ICONS = { gmail: 'G', memory: 'M', googlesheets: 'S', sheets: 'S' };
+
 function renderFirm(d) {
   const msgs = (d.messages || []).map(m =>
     `<div class="email-preview"><div class="email-body">${escHtml(m.text)}</div></div>`).join('');
+
+  const attrHtml = (d.attribution || []).length ? `
+    <div class="section-sub">Sources</div>
+    <div class="attribution">${(d.attribution || []).map(a => {
+      const icon = ATTR_ICONS[a.type] || '·';
+      return `<div class="attr-chip">
+        <div class="attr-icon ${escAttr(a.type)}">${icon}</div>
+        <div><span class="attr-name">${escHtml(a.name)}</span><span class="attr-snippet">${escHtml(a.snippet)}</span></div>
+      </div>`;
+    }).join('')}</div>` : '';
+
   document.getElementById('firm-content').innerHTML = `
     <div class="brief-item">
       <div class="brief-item-header">
@@ -337,6 +360,7 @@ function renderFirm(d) {
         <span class="sent-tag" id="f-err" style="color:var(--red)"></span>
       </div>
       <div class="slots" id="f-slots"></div>
+      ${attrHtml}
     </div>`;
 }
 

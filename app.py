@@ -9,7 +9,7 @@ from openai import OpenAI
 from flask import Flask, jsonify, render_template, request, send_file
 
 import db
-from config import DEEPSEEK_API_KEY, GMAIL_CONNECTION_NAME
+from config import DEEPSEEK_API_KEY, GMAIL_CONNECTION_NAME, SHEETS_CONNECTION_NAME
 from profile import get_founder_email, get_founder_name, require_profile, save_profile
 
 app = Flask(__name__)
@@ -56,8 +56,10 @@ def settings_view():
     permission = db.get_setting("permission", "confirm")
     connected = _gmail_connected()
     cal_connected = _calendar_connected()
+    sheets_conn = _sheets_connected()
     return render_template("settings.html", email=email, permission=permission,
-                           connected=connected, cal_connected=cal_connected)
+                           connected=connected, cal_connected=cal_connected,
+                           sheets_connected=sheets_conn)
 
 @app.route("/qr")
 def qr_view():
@@ -113,12 +115,27 @@ def _brief_for_firm(firm: dict) -> dict:
     msg_text  = "\n".join(f"- {m['sender_name']}: {m['text']}" for m in messages)
 
     # RAG: pull top memories from VectorAI (optional)
+    firm_hits = []
     rag_context = ""
     try:
         from memory import search_firm_memory
-        hits = search_firm_memory(firm_id, "follow up commitment interest urgent traction", limit=4)
-        if hits:
-            rag_context = "\n".join(f"- [{h.get('tier','?')}] {h.get('snippet','')[:150]}" for h in hits)
+        firm_hits = search_firm_memory(firm_id, "follow up commitment interest urgent traction", limit=4)
+        if firm_hits:
+            rag_context = "\n".join(f"- [{h.get('tier','?')}] {h.get('snippet','')[:150]}" for h in firm_hits)
+    except Exception:
+        pass
+
+    # RAG: startup context from Google Sheets
+    startup_hits = []
+    startup_rag = ""
+    try:
+        from memory import search_startup_memory
+        startup_hits = search_startup_memory(f"{firm_name} investor traction metrics revenue growth", limit=4)
+        if startup_hits:
+            startup_rag = "\n".join(
+                f"- [{h.get('source','?')} · {h.get('name','?')}] {h.get('snippet','')[:200]}"
+                for h in startup_hits
+            )
     except Exception:
         pass
 
@@ -129,11 +146,14 @@ Their messages:
 Memory context (most relevant past signals):
 {rag_context or '(none yet)'}
 
+Startup progress (from Google Sheets metrics):
+{startup_rag or '(no data sources connected yet)'}
+
 You are helping a startup founder decide whether to follow up with this contact.
 Return ONLY valid JSON:
 {{
   "urgency": "high" | "medium" | "low",
-  "reason": "<one sentence why>",
+  "reason": "<one sentence why, referencing investor signals and startup progress>",
   "email_subject": "<subject line>",
   "email_body": "<draft follow-up email body, under 120 words, warm and specific>"
 }}"""
@@ -149,6 +169,16 @@ Return ONLY valid JSON:
     latest_msg = messages[-1] if messages else {}
     investor_email = latest_msg.get("sender_email", "")
 
+    # Build attribution: every source that fed the AI decision
+    attribution = []
+    for m in messages[:5]:
+        attribution.append({"type": "gmail", "name": f"{m['sender_name']} · {firm_name}", "snippet": m["text"][:120]})
+    for h in firm_hits:
+        label = h.get("intent_type") or h.get("tier") or "signal"
+        attribution.append({"type": "memory", "name": f"Memory · {h.get('sender', firm_name)} [{label}]", "snippet": h.get("snippet", "")[:120]})
+    for h in startup_hits:
+        attribution.append({"type": h.get("source", "sheets"), "name": h.get("name", ""), "snippet": h.get("snippet", "")[:120]})
+
     return {
         "firm_id":        firm_id,
         "firm_name":      firm_name,
@@ -162,23 +192,39 @@ Return ONLY valid JSON:
         "messages":       messages,
         "message_count":  firm["message_count"],
         "last_contact":   firm["last_message_at"],
+        "attribution":    attribution,
     }
 
 
 @app.route("/api/brief", methods=["POST"])
 def morning_brief():
+    from datetime import datetime, timezone
     firms = db.get_all_firms()
     if not firms:
         return jsonify({"results": []})
 
+    # Sync Sheets once before per-firm analysis so RAG has fresh data
+    last_synced_iso = db.get_setting("startup_last_synced_at", "")
+    sources_synced = []
+    try:
+        from sheets_client import fetch_startup_data
+        from memory import store_startup_memory
+        chunks = fetch_startup_data(since_iso=last_synced_iso or None)
+        for chunk in chunks:
+            store_startup_memory(chunk["text"], chunk["source"], chunk["name"])
+        if chunks:
+            sources_synced.append("googlesheets")
+    except Exception:
+        pass
+    db.set_setting("startup_last_synced_at", datetime.now(timezone.utc).isoformat())
+
     results = [_brief_for_firm(firm) for firm in firms]
-    # Strip heavy fields not needed in the list view
     for r in results:
         r.pop("messages", None)
 
     order = {"high": 0, "medium": 1, "low": 2}
     results.sort(key=lambda x: order.get(x["urgency"], 3))
-    return jsonify({"results": results})
+    return jsonify({"results": results, "sources_synced": sources_synced})
 
 
 @app.route("/api/firm/<firm_id>")
@@ -275,6 +321,21 @@ def schedule():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
+@app.route("/api/sheets-status")
+def sheets_status():
+    try:
+        return jsonify({"connected": _sheets_connected()})
+    except Exception as e:
+        return jsonify({"connected": False, "error": str(e)})
+
+@app.route("/api/connect-sheets")
+def connect_sheets():
+    try:
+        from sheets_client import get_connect_link
+        return jsonify({"url": get_connect_link()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/connect-gmail")
 def connect_gmail():
     try:
@@ -338,6 +399,13 @@ def _calendar_connected() -> bool:
     try:
         from calendar_client import calendar_connected
         return calendar_connected()
+    except Exception:
+        return False
+
+def _sheets_connected() -> bool:
+    try:
+        from sheets_client import sheets_connected
+        return sheets_connected()
     except Exception:
         return False
 
