@@ -5,15 +5,25 @@ import socket
 import threading
 
 import qrcode
-from anthropic import Anthropic
+from openai import OpenAI
 from flask import Flask, jsonify, render_template, request, send_file
 
 import db
-from config import ANTHROPIC_API_KEY, GMAIL_CONNECTION_NAME
+from config import DEEPSEEK_API_KEY, GMAIL_CONNECTION_NAME
 from profile import get_founder_email, get_founder_name, require_profile, save_profile
 
 app = Flask(__name__)
 db.init_db()
+
+_deepseek = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+def _llm(prompt: str, max_tokens: int = 500) -> str:
+    resp = _deepseek.chat.completions.create(
+        model="deepseek-chat",
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return resp.choices[0].message.content.strip()
 
 FIRMS = [
     {"id": "a16z",       "name": "Andreessen Horowitz"},
@@ -28,8 +38,6 @@ FIRMS = [
     {"id": "ff",         "name": "Founders Fund"},
 ]
 FIRM_MAP = {f["id"]: f["name"] for f in FIRMS}
-
-_claude = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
@@ -134,13 +142,8 @@ Return ONLY valid JSON:
 }}"""
 
         try:
-            resp = _claude.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=500,
-                messages=[{"role": "user", "content": prompt}]
-            )
             import re
-            raw = resp.content[0].text.strip()
+            raw = _llm(prompt, max_tokens=500)
             match = re.search(r"\{.*\}", raw, re.DOTALL)
             result = json.loads(match.group()) if match else {}
         except Exception as e:
@@ -268,16 +271,13 @@ def _process_message(firm_id: str, firm_name: str, sender: str, text: str):
     try:
         messages = db.get_firm_messages(firm_id, limit=10)
         history  = "\n".join(f"- {m['sender_name']}: {m['text']}" for m in messages)
-        resp = _claude.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=200,
-            messages=[{"role": "user", "content":
-                f"Investor firm: {firm_name}\nConversation so far:\n{history}\n\n"
-                "Summarize in exactly 3 short bullet points what this investor cares about, "
-                "any commitments or conditions they mentioned, and the current relationship status. "
-                "Return ONLY the 3 bullets starting with •"}]
+        summary = _llm(
+            f"Investor firm: {firm_name}\nConversation so far:\n{history}\n\n"
+            "Summarize in exactly 3 short bullet points what this investor cares about, "
+            "any commitments or conditions they mentioned, and the current relationship status. "
+            "Return ONLY the 3 bullets starting with •",
+            max_tokens=200
         )
-        summary = resp.content[0].text.strip()
         # derive tier from content
         tier = "hot" if any(w in summary.lower() for w in ["lead", "term sheet", "invest", "committed"]) \
              else "warm" if any(w in summary.lower() for w in ["interested", "follow", "traction", "check back"]) \

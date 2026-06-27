@@ -44,6 +44,7 @@ mdurl==0.1.2
 mmh3==5.2.1
 numpy==2.5.0
 onnxruntime==1.27.0
+openai==2.44.0
 packaging==26.2
 pillow==12.2.0
 protobuf==5.29.6

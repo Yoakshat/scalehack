@@ -1,7 +1,7 @@
-from anthropic import Anthropic
-from config import ANTHROPIC_API_KEY
+from openai import OpenAI
+from config import DEEPSEEK_API_KEY
 
-_client: Anthropic | None = None
+_client: OpenAI | None = None
 
 SYSTEM_PROMPT = """You are a founder's ghostwriter drafting investor follow-up emails.
 Write in a direct, confident, warm tone — never sycophantic.
@@ -13,10 +13,10 @@ The email should:
 Return ONLY the email body text. No subject line. No "Here is the email:" preamble."""
 
 
-def _claude() -> Anthropic:
+def _claude() -> OpenAI:
     global _client
     if _client is None:
-        _client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        _client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
     return _client
 
 
@@ -43,13 +43,12 @@ Prior conversation context:
 
 Write the follow-up email body."""
 
-    response = _claude().messages.create(
-        model="claude-sonnet-4-6",
+    response = _claude().chat.completions.create(
+        model="deepseek-chat",
         max_tokens=400,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_msg}],
+        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_msg}],
     )
-    return response.content[0].text.strip()
+    return response.choices[0].message.content.strip()
 
 
 def decide_action(firm_summary: dict, traction: dict) -> dict:
@@ -77,13 +76,13 @@ Should the founder follow up with this investor today?
 Reply with JSON: {{"action": "follow_up"|"wait"|"no_action", "reason": "<1 sentence>", "urgency": "high"|"medium"|"low"}}
 Return ONLY the JSON."""
 
-    response = _claude().messages.create(
-        model="claude-sonnet-4-6",
+    response = _claude().chat.completions.create(
+        model="deepseek-chat",
         max_tokens=150,
         messages=[{"role": "user", "content": prompt}],
     )
     import json, re
-    raw = response.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     match = re.search(r"\{.*\}", raw, re.DOTALL)
     if match:
         try:

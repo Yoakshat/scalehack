@@ -1,9 +1,9 @@
 import json
 import re
-from anthropic import Anthropic
-from config import ANTHROPIC_API_KEY
+from openai import OpenAI
+from config import DEEPSEEK_API_KEY
 
-_client: Anthropic | None = None
+_client: OpenAI | None = None
 
 SYSTEM_PROMPT = """You are an expert at analyzing investor emails for a startup founder.
 Extract structured intent from the email and return ONLY valid JSON with this schema:
@@ -27,10 +27,10 @@ Tier rules:
 Return ONLY the JSON object. No explanation."""
 
 
-def _claude() -> Anthropic:
+def _claude() -> OpenAI:
     global _client
     if _client is None:
-        _client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        _client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
     return _client
 
 
@@ -47,13 +47,12 @@ def _parse_json(text: str) -> dict:
 def extract_intent(sender: str, subject: str, body: str) -> dict:
     """Run Claude over a single email and return structured intent."""
     user_msg = f"Sender: {sender}\nSubject: {subject}\n\nEmail body:\n{body[:3000]}"
-    response = _claude().messages.create(
-        model="claude-sonnet-4-6",
+    response = _claude().chat.completions.create(
+        model="deepseek-chat",
         max_tokens=512,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_msg}],
+        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_msg}],
     )
-    raw = response.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     result = _parse_json(raw)
     result["_raw"] = raw
     return result
