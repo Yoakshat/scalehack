@@ -55,7 +55,9 @@ def settings_view():
     email = get_founder_email()
     permission = db.get_setting("permission", "confirm")
     connected = _gmail_connected()
-    return render_template("settings.html", email=email, permission=permission, connected=connected)
+    cal_connected = _calendar_connected()
+    return render_template("settings.html", email=email, permission=permission,
+                           connected=connected, cal_connected=cal_connected)
 
 @app.route("/qr")
 def qr_view():
@@ -195,6 +197,51 @@ def send_email():
 def auth_status():
     return jsonify({"connected": _gmail_connected()})
 
+
+# ── API: Calendar ──────────────────────────────────────────────────────────────
+
+@app.route("/api/calendar-status")
+def calendar_status():
+    try:
+        from calendar_client import calendar_connected
+        return jsonify({"connected": calendar_connected()})
+    except Exception as e:
+        return jsonify({"connected": False, "error": str(e)})
+
+@app.route("/api/connect-calendar")
+def connect_calendar():
+    try:
+        from calendar_client import get_connect_link
+        return jsonify({"url": get_connect_link()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/availability")
+def availability():
+    try:
+        from calendar_client import get_availability
+        return jsonify({"slots": get_availability()})
+    except Exception as e:
+        return jsonify({"slots": [], "error": str(e)}), 500
+
+@app.route("/api/schedule", methods=["POST"])
+def schedule():
+    data = request.json or {}
+    start = data.get("start", "")
+    if not start:
+        return jsonify({"ok": False, "error": "start is required"}), 400
+    try:
+        from calendar_client import create_event
+        event = create_event(
+            start=start,
+            summary=data.get("summary", "Investor follow-up"),
+            description=data.get("description", "Scheduled via scalehack."),
+            attendees=[data["to"]] if data.get("to") else None,
+        )
+        return jsonify({"ok": True, "event": event})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/api/connect-gmail")
 def connect_gmail():
     try:
@@ -251,6 +298,13 @@ def _gmail_connected() -> bool:
         )
         ca = account.connected_account
         return bool(ca and ca.status == "CONNECTOR_STATUS_ACTIVE")
+    except Exception:
+        return False
+
+def _calendar_connected() -> bool:
+    try:
+        from calendar_client import calendar_connected
+        return calendar_connected()
     except Exception:
         return False
 

@@ -99,6 +99,15 @@ input:focus{border-color:#58a6ff}
 .btn-gmail{background:#21262d;color:#c9d1d9;padding:8px 14px;border:1px solid #30363d;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn-gmail:hover{border-color:#58a6ff;color:#58a6ff}
 .sent-tag{font-size:12px;color:#3fb950;padding:8px 0;display:none}
+
+/* CALENDAR SLOTS */
+.slots{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.slots-label{flex-basis:100%;font-size:12px;color:#8b949e;margin-bottom:2px}
+.slots-loading{font-size:12px;color:#8b949e}
+.slot-btn{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s}
+.slot-btn:hover{border-color:#58a6ff;color:#58a6ff;background:#1c2128}
+.slots-ok{flex-basis:100%;font-size:13px;color:#3fb950;background:#0d2818;border:1px solid #1a4d2e;border-radius:8px;padding:8px 12px}
+.slots-err{flex-basis:100%;font-size:13px;color:#f85149;background:#2d1212;border:1px solid #4d1f1f;border-radius:8px;padding:8px 12px}
 </style>
 </head>
 <body>
@@ -121,6 +130,7 @@ input:focus{border-color:#58a6ff}
   <div class="logo">scale<span>hack</span></div>
   <div class="nav-right">
     <span class="nav-label"><span class="status-dot" id="gmail-dot"></span><span id="gmail-label">checking...</span></span>
+    <span class="nav-label"><span class="status-dot" id="cal-dot"></span><span id="cal-label">checking...</span></span>
     <a href="/qr" target="_blank" class="btn btn-sm">Show QR</a>
     <a href="/settings" class="btn btn-sm">Settings</a>
     <button class="btn btn-brief" onclick="openBrief()">Morning Brief</button>
@@ -182,6 +192,7 @@ async function checkProfile() {
   const stored = localStorage.getItem('founder_setup_done');
   if (!stored) { document.getElementById('setup-modal').style.display = 'flex'; }
   checkGmailStatus();
+  checkCalendarStatus();
 }
 
 async function checkGmailStatus() {
@@ -193,6 +204,15 @@ async function checkGmailStatus() {
   } catch(e) {}
 }
 
+async function checkCalendarStatus() {
+  try {
+    const r = await fetch('/api/calendar-status');
+    const d = await r.json();
+    document.getElementById('cal-dot').className = 'status-dot' + (d.connected ? '' : ' off');
+    document.getElementById('cal-label').textContent = d.connected ? 'Calendar connected' : 'Calendar not connected';
+  } catch(e) {}
+}
+
 async function submitSetup() {
   const name  = document.getElementById('s-name').value.trim();
   const email = document.getElementById('s-email').value.trim();
@@ -201,6 +221,7 @@ async function submitSetup() {
   localStorage.setItem('founder_setup_done','1');
   document.getElementById('setup-modal').style.display = 'none';
   checkGmailStatus();
+  checkCalendarStatus();
 }
 
 // ── Polling ──────────────────────────────────────────────────────────────────
@@ -314,9 +335,13 @@ function renderBrief(results) {
         <button class="btn-send" id="send-btn-${i}" onclick="sendEmail(${i}, '${escAttr(r.email_subject)}', '${escAttr(r.email_body)}', '${r.firm_id}', '${escAttr(r.investor_email||'')}')">
           ✉ Send Draft to Gmail
         </button>
+        <button class="btn-gmail" id="times-btn-${i}" onclick="suggestTimes(${i}, '${escAttr(r.firm_name)}', '${escAttr(r.investor_email||'')}')">
+          📅 Suggest times
+        </button>
         <span class="sent-tag" id="sent-${i}">✓ Draft saved — <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" style="color:#3fb950">Open Gmail →</a></span>
         <span class="sent-tag" id="err-${i}" style="color:#f85149"></span>
       </div>
+      <div class="slots" id="slots-${i}"></div>
     </div>`).join('');
 
   document.getElementById('brief-content').innerHTML = html;
@@ -346,6 +371,56 @@ async function sendEmail(idx, subject, body, firmId, to) {
   } catch(e) {
     btn.disabled = false;
     btn.textContent = 'Retry';
+  }
+}
+
+// ── Calendar: suggest times + book ────────────────────────────────────────────
+async function suggestTimes(idx, firmName, investorEmail) {
+  const btn  = document.getElementById(`times-btn-${idx}`);
+  const cont = document.getElementById(`slots-${idx}`);
+  btn.disabled = true;
+  cont.innerHTML = '<div class="slots-loading">Checking your calendar…</div>';
+  try {
+    const res  = await fetch('/api/availability');
+    const data = await res.json();
+    const slots = data.slots || [];
+    if (!slots.length) {
+      cont.innerHTML = `<div class="slots-err">${data.error ? 'Calendar error — connect it in Settings.' : 'No open slots found.'}</div>`;
+      btn.disabled = false;
+      return;
+    }
+    cont.innerHTML = '<div class="slots-label">Pick a time to book on your calendar:</div>' +
+      slots.map(s => `<button class="slot-btn" onclick='bookSlot(${idx}, ${JSON.stringify(s)}, "${escAttr(firmName)}", "${escAttr(investorEmail)}")'>${s.label}</button>`).join('');
+    btn.disabled = false;
+  } catch(e) {
+    cont.innerHTML = `<div class="slots-err">✗ ${e.message}</div>`;
+    btn.disabled = false;
+  }
+}
+
+async function bookSlot(idx, slot, firmName, investorEmail) {
+  const cont = document.getElementById(`slots-${idx}`);
+  cont.innerHTML = '<div class="slots-loading">Booking…</div>';
+  try {
+    const res = await fetch('/api/schedule', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        start: slot.start,
+        summary: `Investor follow-up: ${firmName}`,
+        description: 'Scheduled via scalehack.',
+        to: investorEmail || ''
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const link = data.event && data.event.html_link;
+      cont.innerHTML = `<div class="slots-ok">✓ Booked ${slot.label}` +
+        (link ? ` — <a href="${link}" target="_blank" style="color:#3fb950">View event →</a>` : '') + '</div>';
+    } else {
+      cont.innerHTML = `<div class="slots-err">✗ ${data.error || 'Could not book.'}</div>`;
+    }
+  } catch(e) {
+    cont.innerHTML = `<div class="slots-err">✗ ${e.message}</div>`;
   }
 }
 
