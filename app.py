@@ -149,21 +149,19 @@ Memory context (most relevant past signals):
 Startup progress (from Google Sheets metrics):
 {startup_rag or '(no data sources connected yet)'}
 
-You are helping a startup founder decide what to do with this investor contact.
-
-Actions available:
-- "email": send a follow-up email (only if there is a real reason — new traction, a condition was met, a deadline, or they asked for an update)
-- "calendar": schedule a meeting (only if investor expressed interest in meeting)
-- "both": email + schedule
-- "none": nothing to do right now — no new signal, no pending commitment, nothing actionable
+You are helping a startup founder prioritize and act on investor relationships.
+There is ALWAYS something to do — choose the most appropriate action:
+- "email": send a follow-up email
+- "calendar": propose a meeting
+- "both": send an email AND propose a meeting
 
 Return ONLY valid JSON:
 {{
   "urgency": "high" | "medium" | "low",
-  "action": "email" | "calendar" | "both" | "none",
-  "reason": "<one sentence why, referencing investor signals and startup progress>",
-  "email_subject": "<subject line, or empty string if action is none/calendar>",
-  "email_body": "<draft follow-up email body, under 120 words, warm and specific. Empty if action is none/calendar>"
+  "action": "email" | "calendar" | "both",
+  "reason": "<one sentence why this urgency, referencing the investor signals>",
+  "email_subject": "<subject line (for email or both)>",
+  "email_body": "<draft follow-up email body, under 120 words, warm and specific (for email or both)>"
 }}"""
 
     try:
@@ -172,11 +170,11 @@ Return ONLY valid JSON:
         match = re.search(r"\{.*\}", raw, re.DOTALL)
         result = json.loads(match.group()) if match else {}
     except Exception as e:
-        result = {"urgency": "low", "action": "none", "reason": str(e), "email_subject": "", "email_body": ""}
+        result = {"urgency": "low", "action": "email", "reason": str(e), "email_subject": "", "email_body": ""}
 
     latest_msg = messages[-1] if messages else {}
     investor_email = latest_msg.get("sender_email", "")
-    action = result.get("action", "none")
+    action = result.get("action", "email")
 
     # Persist action so /api/firms can rank cards without re-running the LLM
     try:
