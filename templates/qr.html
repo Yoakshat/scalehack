@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scalehack — QR Code</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:40px}
+h1{font-size:28px;font-weight:700;letter-spacing:-0.5px}.logo span{color:#58a6ff}
+.qr-card{background:#fff;border-radius:20px;padding:24px;display:flex;align-items:center;justify-content:center}
+.qr-card img{width:240px;height:240px;display:block}
+.url{font-size:18px;color:#8b949e;letter-spacing:.5px;font-family:monospace}
+p{font-size:16px;color:#8b949e;text-align:center;max-width:400px;line-height:1.6}
+a{color:#58a6ff;text-decoration:none}.a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <h1 class="logo">scale<span>hack</span></h1>
+  <p>Scan to join as an investor and send messages in real time.</p>
+  <div class="qr-card">
+    <img src="/api/qr-image" alt="QR Code"/>
+  </div>
+  <div class="url">{{ url }}</div>
+  <p style="font-size:14px">Or share the link above. Messages appear live on the founder's screen.</p>
+  <a href="/">← Back to live view</a>
+</body>
+</html>

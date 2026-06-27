@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scalehack — Live View</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;overflow-x:hidden}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;background:#161b22;border-bottom:1px solid #30363d;position:sticky;top:0;z-index:50}
+.logo{font-size:18px;font-weight:700;letter-spacing:-0.5px;color:#fff}.logo span{color:#58a6ff}
+.nav-right{display:flex;align-items:center;gap:12px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#3fb950;display:inline-block;margin-right:4px}
+.status-dot.off{background:#f85149}
+.nav-label{font-size:13px;color:#8b949e}
+.btn{padding:8px 16px;border-radius:8px;border:none;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.btn-brief{background:#58a6ff;color:#0d1117}
+.btn-brief:hover{opacity:.85}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px;background:#21262d;color:#c9d1d9;border:1px solid #30363d}
+.btn-sm:hover{background:#30363d}
+
+/* SETUP MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:36px;width:420px}
+.modal h2{font-size:20px;font-weight:600;margin-bottom:6px}
+.modal p{font-size:13px;color:#8b949e;margin-bottom:24px}
+label{display:block;font-size:12px;font-weight:500;color:#8b949e;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+input{width:100%;padding:10px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:15px;outline:none;margin-bottom:14px}
+input:focus{border-color:#58a6ff}
+.btn-primary{background:#58a6ff;color:#0d1117;width:100%;justify-content:center;padding:11px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer}
+.btn-primary:hover{opacity:.88}
+
+/* BUBBLES CANVAS */
+.canvas{padding:40px 28px;min-height:calc(100vh - 56px)}
+.empty-state{text-align:center;padding:100px 20px;color:#484f58}
+.empty-state .icon{font-size:48px;margin-bottom:16px}
+.empty-state h3{font-size:18px;color:#8b949e;margin-bottom:8px}
+.empty-state p{font-size:14px}
+.qr-hint{margin-top:24px;display:inline-flex;align-items:center;gap:8px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px 16px;font-size:13px;color:#8b949e;text-decoration:none}
+.qr-hint:hover{border-color:#58a6ff;color:#58a6ff}
+
+.bubbles-grid{display:flex;flex-wrap:wrap;gap:28px;padding:8px 0}
+
+/* FIRM BUBBLE */
+.firm-bubble{display:flex;flex-direction:column;align-items:center;cursor:pointer;position:relative;transition:transform .2s}
+.firm-bubble:hover{transform:translateY(-3px)}
+.bubble-ring{position:relative;width:110px;height:110px}
+.bubble-circle{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;border:2px solid transparent;transition:border-color .3s}
+.bubble-circle.hot{border-color:#f85149}
+.bubble-circle.warm{border-color:#d29922}
+.bubble-circle.cold{border-color:transparent}
+.pulse-ring{position:absolute;inset:-6px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:none}
+.pulse-ring.pulsing{animation:pulse 1.2s ease-out 3}
+@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.3);opacity:0}}
+.msg-badge{position:absolute;top:4px;right:4px;background:#58a6ff;color:#0d1117;border-radius:10px;font-size:11px;font-weight:700;padding:2px 6px;min-width:20px;text-align:center}
+.bubble-name{margin-top:10px;font-size:13px;font-weight:600;color:#c9d1d9;text-align:center;max-width:120px}
+.bubble-snippet{margin-top:4px;font-size:11px;color:#8b949e;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.memory-tag{margin-top:5px;font-size:10px;padding:2px 7px;border-radius:10px;background:#21262d;color:#8b949e}
+.memory-tag.updating{color:#d29922;background:#2d2000;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* TOOLTIP */
+.tooltip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px 14px;width:220px;z-index:100;pointer-events:none;opacity:0;transition:opacity .15s;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.firm-bubble:hover .tooltip{opacity:1}
+.tooltip-tier{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.tooltip-tier.hot{color:#f85149}.tooltip-tier.warm{color:#d29922}.tooltip-tier.cold{color:#8b949e}
+.tooltip-body{font-size:12px;color:#c9d1d9;line-height:1.6;white-space:pre-wrap}
+.tooltip-empty{font-size:12px;color:#484f58;font-style:italic}
+
+/* MORNING BRIEF PANEL */
+.brief-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;display:none;align-items:flex-end;justify-content:center}
+.brief-overlay.open{display:flex}
+.brief-panel{background:#161b22;border:1px solid #30363d;border-radius:16px 16px 0 0;width:100%;max-width:720px;max-height:85vh;overflow-y:auto;padding:28px}
+.brief-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.brief-header h2{font-size:20px;font-weight:700}
+.close-btn{background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1}
+.close-btn:hover{color:#e6edf3}
+.brief-loading{text-align:center;padding:40px;color:#8b949e}
+.spinner{width:24px;height:24px;border:2.5px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.brief-item{background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:18px;margin-bottom:14px}
+.brief-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.brief-firm{font-size:16px;font-weight:600}
+.badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+.badge-high{background:#3d1212;color:#f85149}
+.badge-medium{background:#2d1f00;color:#d29922}
+.badge-low{background:#0d2818;color:#3fb950}
+.brief-reason{font-size:13px;color:#8b949e;margin-bottom:14px}
+.email-preview{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:12px}
+.email-subject{font-size:13px;font-weight:600;color:#58a6ff;margin-bottom:8px}
+.email-body{font-size:13px;color:#c9d1d9;line-height:1.6;white-space:pre-wrap}
+.brief-actions{display:flex;gap:10px}
+.btn-send{background:#3fb950;color:#0d1117;padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-send:hover{opacity:.88}
+.btn-send:disabled{opacity:.4;cursor:not-allowed}
+.btn-gmail{background:#21262d;color:#c9d1d9;padding:8px 14px;border:1px solid #30363d;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-gmail:hover{border-color:#58a6ff;color:#58a6ff}
+.sent-tag{font-size:12px;color:#3fb950;padding:8px 0;display:none}
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL (if no profile) -->
+<div class="modal-bg" id="setup-modal" style="display:none">
+  <div class="modal">
+    <h2>Welcome to Scalehack</h2>
+    <p>Set up your founder profile to get started.</p>
+    <label>Your name</label>
+    <input type="text" id="s-name" placeholder="Akshat"/>
+    <label>Your email</label>
+    <input type="email" id="s-email" placeholder="you@startup.com"/>
+    <button class="btn-primary" onclick="submitSetup()">Get started →</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">scale<span>hack</span></div>
+  <div class="nav-right">
+    <span class="nav-label"><span class="status-dot" id="gmail-dot"></span><span id="gmail-label">checking...</span></span>
+    <a href="/qr" target="_blank" class="btn btn-sm">Show QR</a>
+    <a href="/settings" class="btn btn-sm">Settings</a>
+    <button class="btn btn-brief" onclick="openBrief()">Morning Brief</button>
+  </div>
+</nav>
+
+<!-- MAIN CANVAS -->
+<div class="canvas">
+  <div class="empty-state" id="empty-state">
+    <div class="icon">📡</div>
+    <h3>Waiting for investors...</h3>
+    <p>Share the QR code and watch firm bubbles appear in real time.</p>
+    <a href="/qr" target="_blank" class="qr-hint">📲 Open QR Code</a>
+  </div>
+  <div class="bubbles-grid" id="bubbles-grid"></div>
+</div>
+
+<!-- MORNING BRIEF PANEL -->
+<div class="brief-overlay" id="brief-overlay">
+  <div class="brief-panel">
+    <div class="brief-header">
+      <h2>Morning Brief</h2>
+      <button class="close-btn" onclick="closeBrief()">×</button>
+    </div>
+    <div id="brief-content">
+      <div class="brief-loading"><div class="spinner"></div>Analyzing investor signals...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#1f6feb','#388bfd','#56d364','#e3b341','#f85149','#db61a2','#79c0ff','#d2a8ff'];
+let firmColors = {};
+let colorIdx = 0;
+let firmData = {};
+let prevMessageCounts = {};
+let pulsingFirms = new Set();
+
+function getFirmColor(firmId) {
+  if (!firmColors[firmId]) { firmColors[firmId] = COLORS[colorIdx++ % COLORS.length]; }
+  return firmColors[firmId];
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function truncate(str, n) {
+  return str && str.length > n ? str.slice(0,n) + '…' : (str || '');
+}
+
+// Check profile on load
+async function checkProfile() {
+  const res = await fetch('/api/firms');
+  const firms = await res.json();
+  // If we can reach the API, profile check via setup modal
+  const profileRes = await fetch('/api/auth-status');
+  // Show setup modal if no founder email set
+  const stored = localStorage.getItem('founder_setup_done');
+  if (!stored) { document.getElementById('setup-modal').style.display = 'flex'; }
+  checkGmailStatus();
+}
+
+async function checkGmailStatus() {
+  try {
+    const r = await fetch('/api/auth-status');
+    const d = await r.json();
+    document.getElementById('gmail-dot').className = 'status-dot' + (d.connected ? '' : ' off');
+    document.getElementById('gmail-label').textContent = d.connected ? 'Gmail connected' : 'Gmail not connected';
+  } catch(e) {}
+}
+
+async function submitSetup() {
+  const name  = document.getElementById('s-name').value.trim();
+  const email = document.getElementById('s-email').value.trim();
+  if (!email) return;
+  await fetch('/api/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email}) });
+  localStorage.setItem('founder_setup_done','1');
+  document.getElementById('setup-modal').style.display = 'none';
+  checkGmailStatus();
+}
+
+// ── Polling ──────────────────────────────────────────────────────────────────
+async function poll() {
+  try {
+    const res  = await fetch('/api/firms');
+    const firms = await res.json();
+    renderBubbles(firms);
+  } catch(e) {}
+}
+
+function renderBubbles(firms) {
+  const grid  = document.getElementById('bubbles-grid');
+  const empty = document.getElementById('empty-state');
+
+  if (!firms.length) { empty.style.display = 'block'; grid.innerHTML = ''; return; }
+  empty.style.display = 'none';
+
+  firms.forEach(firm => {
+    const id    = firm.firm_id;
+    const count = firm.message_count;
+    const prev  = prevMessageCounts[id] || 0;
+    const isNew = count > prev;
+    prevMessageCounts[id] = count;
+
+    const color   = getFirmColor(id);
+    const tier    = firm.tier || 'cold';
+    const summary = firm.summary || '';
+    const snippet = truncate(firm.latest_text, 38);
+    const memAge  = firm.memory_updated_at && firm.last_message_at
+                  ? new Date(firm.memory_updated_at) < new Date(firm.last_message_at)
+                  : false;
+
+    let el = document.getElementById(`bubble-${id}`);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = `bubble-${id}`;
+      el.className = 'firm-bubble';
+      grid.appendChild(el);
+    }
+
+    el.innerHTML = `
+      <div class="bubble-ring">
+        <div class="bubble-circle ${tier}" style="background:${color}22;border-color:${tier==='hot'?'#f85149':tier==='warm'?'#d29922':color}">
+          <span style="color:${color}">${initials(firm.firm_name)}</span>
+        </div>
+        <span class="pulse-ring ${isNew?'pulsing':''}" style="color:${color}"></span>
+        <span class="msg-badge">${count}</span>
+      </div>
+      <div class="bubble-name">${firm.firm_name}</div>
+      <div class="bubble-snippet">${snippet}</div>
+      <div class="memory-tag ${memAge?'updating':''}">
+        ${memAge ? 'updating memory...' : (summary ? 'memory updated' : 'no memory yet')}
+      </div>
+      <div class="tooltip">
+        <div class="tooltip-tier ${tier}">${tier.toUpperCase()}</div>
+        ${summary
+          ? `<div class="tooltip-body">${summary}</div>`
+          : `<div class="tooltip-empty">Memory building...</div>`}
+      </div>`;
+  });
+
+  // Remove bubbles for firms no longer present
+  const ids = new Set(firms.map(f => f.firm_id));
+  grid.querySelectorAll('.firm-bubble').forEach(el => {
+    if (!ids.has(el.id.replace('bubble-',''))) el.remove();
+  });
+}
+
+// ── Morning Brief ─────────────────────────────────────────────────────────────
+function openBrief() {
+  document.getElementById('brief-overlay').classList.add('open');
+  document.getElementById('brief-content').innerHTML =
+    '<div class="brief-loading"><div class="spinner"></div>Analyzing investor signals via RAG...</div>';
+  runBrief();
+}
+
+function closeBrief() {
+  document.getElementById('brief-overlay').classList.remove('open');
+}
+
+async function runBrief() {
+  try {
+    const res  = await fetch('/api/brief', {method:'POST'});
+    const data = await res.json();
+    renderBrief(data.results || []);
+  } catch(e) {
+    document.getElementById('brief-content').innerHTML = `<p style="color:#f85149">Error: ${e.message}</p>`;
+  }
+}
+
+function renderBrief(results) {
+  if (!results.length) {
+    document.getElementById('brief-content').innerHTML =
+      '<p style="color:#8b949e;text-align:center;padding:40px">No investor data yet.</p>';
+    return;
+  }
+
+  const html = results.map((r,i) => `
+    <div class="brief-item" id="brief-item-${i}">
+      <div class="brief-item-header">
+        <div class="brief-firm">${r.firm_name}</div>
+        <span class="badge badge-${r.urgency}">${r.urgency}</span>
+      </div>
+      <div class="brief-reason">${r.reason}</div>
+      <div class="email-preview">
+        <div class="email-subject">Subject: ${r.email_subject}</div>
+        <div class="email-body">${escHtml(r.email_body)}</div>
+      </div>
+      <div class="brief-actions">
+        <button class="btn-send" id="send-btn-${i}" onclick="sendEmail(${i}, '${escAttr(r.email_subject)}', '${escAttr(r.email_body)}', '${r.firm_id}')">
+          ✉ Send Draft to Gmail
+        </button>
+        <span class="sent-tag" id="sent-${i}">✓ Draft saved to Gmail</span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('brief-content').innerHTML = html;
+}
+
+async function sendEmail(idx, subject, body, firmId) {
+  const btn  = document.getElementById(`send-btn-${idx}`);
+  const tag  = document.getElementById(`sent-${idx}`);
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const res  = await fetch('/api/send-email', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({subject, body, firm_id: firmId})
+    });
+    const data = await res.json();
+    btn.style.display = 'none';
+    tag.style.display = 'inline-flex';
+    // open Gmail drafts
+    setTimeout(() => window.open('https://mail.google.com/mail/u/0/#drafts','_blank'), 800);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+  }
+}
+
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function escAttr(s){ return (s||'').replace(/'/g,"\\'").replace(/\n/g,'\\n') }
+
+// Init
+checkProfile();
+setInterval(poll, 2000);
+poll();
+</script>
+</body>
+</html>
