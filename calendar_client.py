@@ -13,6 +13,9 @@ from config import (
 from gmail_client import get_client  # reuse the same singleton ScalekitClient
 from profile import get_founder_email
 
+# Scalekit SDK has reported both of these for an active connection across versions.
+_ACTIVE_STATUSES = {"ACTIVE", "CONNECTOR_STATUS_ACTIVE"}
+
 # Business-hour slot template (local time, 24h)
 _SLOT_HOURS = [(9, 0), (10, 30), (11, 0), (13, 0), (14, 0), (15, 0)]
 _SLOT_MINUTES = 30
@@ -36,7 +39,7 @@ def ensure_calendar_connected() -> bool:
         identifier=identifier,
     )
     ca = account.connected_account
-    if ca and ca.status == "CONNECTOR_STATUS_ACTIVE":
+    if ca and ca.status in _ACTIVE_STATUSES:
         return True
 
     link = client.actions.get_authorization_link(
@@ -59,7 +62,7 @@ def calendar_connected() -> bool:
             connection_name=GCAL_CONNECTION_NAME, identifier=identifier
         )
         ca = account.connected_account
-        return bool(ca and ca.status == "CONNECTOR_STATUS_ACTIVE")
+        return bool(ca and ca.status in _ACTIVE_STATUSES)
     except Exception:
         return False
 

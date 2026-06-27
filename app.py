@@ -297,7 +297,7 @@ def _gmail_connected() -> bool:
             connection_name=GMAIL_CONNECTION_NAME, identifier=email
         )
         ca = account.connected_account
-        return bool(ca and ca.status == "CONNECTOR_STATUS_ACTIVE")
+        return bool(ca and ca.status in ("ACTIVE", "CONNECTOR_STATUS_ACTIVE"))
     except Exception:
         return False
 

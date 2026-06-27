@@ -28,7 +28,8 @@ def ensure_gmail_connected() -> bool:
     ca = account.connected_account
     status = ca.status if ca else None
 
-    if status == "CONNECTOR_STATUS_ACTIVE":
+    # Scalekit SDK has reported both of these for an active connection across versions.
+    if status in ("ACTIVE", "CONNECTOR_STATUS_ACTIVE"):
         return True
 
     link = client.actions.get_authorization_link(
