@@ -149,25 +149,40 @@ Memory context (most relevant past signals):
 Startup progress (from Google Sheets metrics):
 {startup_rag or '(no data sources connected yet)'}
 
-You are helping a startup founder decide whether to follow up with this contact.
+You are helping a startup founder decide what to do with this investor contact.
+
+Actions available:
+- "email": send a follow-up email (only if there is a real reason — new traction, a condition was met, a deadline, or they asked for an update)
+- "calendar": schedule a meeting (only if investor expressed interest in meeting)
+- "both": email + schedule
+- "none": nothing to do right now — no new signal, no pending commitment, nothing actionable
+
 Return ONLY valid JSON:
 {{
   "urgency": "high" | "medium" | "low",
+  "action": "email" | "calendar" | "both" | "none",
   "reason": "<one sentence why, referencing investor signals and startup progress>",
-  "email_subject": "<subject line>",
-  "email_body": "<draft follow-up email body, under 120 words, warm and specific>"
+  "email_subject": "<subject line, or empty string if action is none/calendar>",
+  "email_body": "<draft follow-up email body, under 120 words, warm and specific. Empty if action is none/calendar>"
 }}"""
 
     try:
         import re
-        raw = _llm(prompt, max_tokens=500)
+        raw = _llm(prompt, max_tokens=550)
         match = re.search(r"\{.*\}", raw, re.DOTALL)
         result = json.loads(match.group()) if match else {}
     except Exception as e:
-        result = {"urgency": "low", "reason": str(e), "email_subject": "", "email_body": ""}
+        result = {"urgency": "low", "action": "none", "reason": str(e), "email_subject": "", "email_body": ""}
 
     latest_msg = messages[-1] if messages else {}
     investor_email = latest_msg.get("sender_email", "")
+    action = result.get("action", "none")
+
+    # Persist action so /api/firms can rank cards without re-running the LLM
+    try:
+        db.set_firm_action(firm_id, action)
+    except Exception:
+        pass
 
     # Build attribution: every source that fed the AI decision
     attribution = []
@@ -183,8 +198,9 @@ Return ONLY valid JSON:
         "firm_id":        firm_id,
         "firm_name":      firm_name,
         "urgency":        result.get("urgency", "low"),
+        "action":         action,
         "reason":         result.get("reason", ""),
-        "email_subject":  result.get("email_subject", f"Following up — {firm_name}"),
+        "email_subject":  result.get("email_subject", ""),
         "email_body":     result.get("email_body", ""),
         "investor_email": investor_email,
         "summary":        firm.get("summary", ""),

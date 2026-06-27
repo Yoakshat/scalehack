@@ -25,6 +25,7 @@ def init_db():
                 firm_name TEXT NOT NULL,
                 summary TEXT DEFAULT '',
                 tier TEXT DEFAULT 'cold',
+                action TEXT DEFAULT 'none',
                 updated_at TEXT DEFAULT (datetime('now'))
             );
             CREATE TABLE IF NOT EXISTS settings (
@@ -37,6 +38,11 @@ def init_db():
                 processed_at TEXT DEFAULT (datetime('now'))
             );
         """)
+        # Migrate existing dbs that predate the action column
+        try:
+            conn.execute("ALTER TABLE firm_memories ADD COLUMN action TEXT DEFAULT 'none'")
+        except Exception:
+            pass
 
 def is_email_processed(gmail_id):
     with get_db() as conn:
@@ -73,6 +79,7 @@ def get_all_firms():
                 (SELECT sender_name FROM messages WHERE firm_id = m.firm_id ORDER BY created_at DESC LIMIT 1) as latest_sender,
                 fm.summary,
                 fm.tier,
+                fm.action,
                 fm.updated_at as memory_updated_at
             FROM messages m
             LEFT JOIN firm_memories fm ON m.firm_id = fm.firm_id
@@ -99,6 +106,13 @@ def update_firm_memory(firm_id, firm_name, summary, tier):
                 tier = excluded.tier,
                 updated_at = excluded.updated_at
         """, (firm_id, firm_name, summary, tier))
+
+def set_firm_action(firm_id, action):
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE firm_memories SET action = ? WHERE firm_id = ?",
+            (action, firm_id)
+        )
 
 def get_setting(key, default=None):
     with get_db() as conn:

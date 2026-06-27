@@ -234,6 +234,12 @@ async function poll() {
 const TIER_RANK  = { hot: 0, warm: 1, cold: 2 };
 const TIER_LABEL = { hot: 'High', warm: 'Medium', cold: 'Low' };
 
+function rankFirm(firm) {
+  // action=none always goes to the bottom, regardless of tier
+  if (firm.action === 'none') return 10 + TIER_RANK[firm.tier || 'cold'];
+  return TIER_RANK[firm.tier || 'cold'];
+}
+
 function renderCards(firms) {
   const grid  = document.getElementById('cards');
   const empty = document.getElementById('empty-state');
@@ -241,9 +247,9 @@ function renderCards(firms) {
   if (!firms.length) { empty.style.display = 'flex'; grid.innerHTML = ''; return; }
   empty.style.display = 'none';
 
-  // Auto-prioritize: highest tier first, then most recent.
+  // action=none firms sink below all actionable firms regardless of tier
   const sorted = [...firms].sort((a, b) => {
-    const ra = TIER_RANK[a.tier || 'cold'], rb = TIER_RANK[b.tier || 'cold'];
+    const ra = rankFirm(a), rb = rankFirm(b);
     if (ra !== rb) return ra - rb;
     return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0);
   });
@@ -256,7 +262,9 @@ function renderCards(firms) {
     prevMessageCounts[id] = count;
 
     const tier    = firm.tier || 'cold';
+    const action  = firm.action || 'none';
     const summary = firm.summary || firm.latest_text || '';
+    const isNone  = action === 'none';
 
     let el = document.getElementById(`card-${id}`);
     if (!el) {
@@ -265,11 +273,15 @@ function renderCards(firms) {
       el.className = 'firm-card';
       el.onclick = () => openFirm(id, firm.firm_name);
     }
+    if (isNone) el.style.opacity = '0.55'; else el.style.opacity = '';
     // Re-append in sorted order so the DOM reflects priority.
     grid.appendChild(el);
     // Only glow for genuinely new arrivals — not the initial page load.
     if (isNew && !firstLoad) { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); }
 
+    const prioClass = isNone ? 'prio-cold' : `prio-${tier}`;
+    const prioLabel = isNone ? '—' : TIER_LABEL[tier];
+    const dotClass  = isNone ? 'cold' : tier;
     el.innerHTML = `
       <div class="card-monogram">${initials(firm.firm_name)}</div>
       <div class="card-main">
@@ -277,7 +289,7 @@ function renderCards(firms) {
         <div class="card-summary">${escHtml(truncate(summary, 96))}</div>
       </div>
       <div class="card-right">
-        <span class="prio prio-${tier}"><span class="tier-dot ${tier}"></span>${TIER_LABEL[tier]}</span>
+        <span class="prio ${prioClass}"><span class="tier-dot ${dotClass}"></span>${prioLabel}</span>
         <span class="card-meta">${count} ${count==1?'msg':'msgs'}</span>
       </div>`;
   });
@@ -348,18 +360,27 @@ function renderFirm(d) {
       <div class="brief-reason">${escHtml(d.reason || d.summary || '')}</div>
       <div class="section-sub">Recent messages</div>
       ${msgs || '<div class="brief-reason">No messages yet.</div>'}
-      <div class="section-sub">Suggested draft</div>
+      ${d.action === 'none'
+        ? `<div class="brief-reason" style="margin-top:16px;color:var(--muted);font-style:italic">No action needed right now — nothing to follow up on.</div>`
+        : `<div class="section-sub">Suggested draft</div>
       <div class="email-preview">
-        <input id="f-subject" class="firm-input" value="${escHtml(d.email_subject)}"/>
-        <textarea id="f-body" class="firm-textarea">${escHtml(d.email_body)}</textarea>
+        ${(d.action === 'email' || d.action === 'both')
+          ? `<input id="f-subject" class="firm-input" value="${escHtml(d.email_subject)}"/>
+        <textarea id="f-body" class="firm-textarea">${escHtml(d.email_body)}</textarea>`
+          : ''}
       </div>
       <div class="brief-actions">
-        <button class="btn-send" id="f-send-btn" onclick="sendFirmEmail('${escAttr(d.firm_id)}','${escAttr(d.investor_email||'')}')">Send draft</button>
-        <button class="btn-gmail" id="f-times-btn" onclick="firmSuggestTimes('${escAttr(d.firm_name)}','${escAttr(d.investor_email||'')}')">Send calendar invite</button>
+        ${(d.action === 'email' || d.action === 'both')
+          ? `<button class="btn-send" id="f-send-btn" onclick="sendFirmEmail('${escAttr(d.firm_id)}','${escAttr(d.investor_email||'')}')">Send draft</button>`
+          : ''}
+        ${(d.action === 'calendar' || d.action === 'both')
+          ? `<button class="btn-gmail" id="f-times-btn" onclick="firmSuggestTimes('${escAttr(d.firm_name)}','${escAttr(d.investor_email||'')}')">Send calendar invite</button>`
+          : ''}
         <span class="sent-tag" id="f-sent">Draft saved — <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank">Open Gmail</a></span>
         <span class="sent-tag" id="f-err" style="color:var(--red)"></span>
       </div>
-      <div class="slots" id="f-slots"></div>
+      <div class="slots" id="f-slots"></div>`
+      }
       ${attrHtml}
     </div>`;
 }
