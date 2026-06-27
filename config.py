@@ -1,0 +1,14 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SCALEKIT_ENV_URL = os.environ["SCALEKIT_ENV_URL"]
+SCALEKIT_CLIENT_ID = os.environ["SCALEKIT_CLIENT_ID"]
+SCALEKIT_CLIENT_SECRET = os.environ["SCALEKIT_CLIENT_SECRET"]
+GMAIL_CONNECTION_NAME = os.environ["GMAIL_CONNECTION_NAME"]
+FOUNDER_EMAIL = os.environ["FOUNDER_EMAIL"]
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+
+VECTORAI_HOST = os.getenv("VECTORAI_HOST", "localhost:6574")
+VECTOR_DIM = 384

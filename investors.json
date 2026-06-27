@@ -1,0 +1,15 @@
+{
+  "firms": [
+    { "name": "Andreessen Horowitz", "short": "a16z", "domains": ["a16z.com", "andreessenhorowitz.com"] },
+    { "name": "Sequoia Capital", "short": "sequoia", "domains": ["sequoiacap.com", "sequoia.com"] },
+    { "name": "Y Combinator", "short": "yc", "domains": ["ycombinator.com", "yc.com"] },
+    { "name": "Accel", "short": "accel", "domains": ["accel.com"] },
+    { "name": "Benchmark", "short": "benchmark", "domains": ["benchmark.com"] },
+    { "name": "Lightspeed", "short": "lightspeed", "domains": ["lsvp.com", "lightspeedvp.com"] },
+    { "name": "General Catalyst", "short": "gc", "domains": ["generalcatalyst.com"] },
+    { "name": "Kleiner Perkins", "short": "kpcb", "domains": ["kleinerperkins.com"] },
+    { "name": "Index Ventures", "short": "index", "domains": ["indexventures.com"] },
+    { "name": "Founders Fund", "short": "ff", "domains": ["foundersfund.com"] }
+  ],
+  "individual_emails": []
+}
