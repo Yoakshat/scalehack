@@ -350,18 +350,12 @@ function renderFirm(d) {
       ${msgs || '<div class="brief-reason">No messages yet.</div>'}
       <div class="section-sub">Suggested draft</div>
       <div class="email-preview">
-        ${(d.action === 'email' || d.action === 'both')
-          ? `<input id="f-subject" class="firm-input" value="${escHtml(d.email_subject)}"/>
-        <textarea id="f-body" class="firm-textarea">${escHtml(d.email_body)}</textarea>`
-          : ''}
+        <input id="f-subject" class="firm-input" value="${escHtml(d.email_subject)}"/>
+        <textarea id="f-body" class="firm-textarea">${escHtml(d.email_body)}</textarea>
       </div>
       <div class="brief-actions">
-        ${(d.action === 'email' || d.action === 'both')
-          ? `<button class="btn-send" id="f-send-btn" onclick="sendFirmEmail('${escAttr(d.firm_id)}','${escAttr(d.investor_email||'')}')">Send draft</button>`
-          : ''}
-        ${(d.action === 'calendar' || d.action === 'both')
-          ? `<button class="btn-gmail" id="f-times-btn" onclick="firmSuggestTimes('${escAttr(d.firm_name)}','${escAttr(d.investor_email||'')}')">Send calendar invite</button>`
-          : ''}
+        <button class="btn-send" id="f-send-btn" onclick="sendFirmEmail('${escAttr(d.firm_id)}','${escAttr(d.investor_email||'')}')">Send draft</button>
+        <button class="btn-gmail" id="f-times-btn" onclick="firmSuggestTimes('${escAttr(d.firm_name)}','${escAttr(d.investor_email||'')}')">Send calendar invite</button>
         <span class="sent-tag" id="f-sent">Draft saved — <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank">Open Gmail</a></span>
         <span class="sent-tag" id="f-err" style="color:var(--red)"></span>
       </div>
