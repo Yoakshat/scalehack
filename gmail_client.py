@@ -35,8 +35,8 @@ def ensure_gmail_connected() -> bool:
         identifier=identifier,
         connection_name=GMAIL_CONNECTION_NAME,
     )
-    print(f"\nGmail not connected. Opening auth URL...\n{link.url}\n")
-    webbrowser.open(link.url)
+    print(f"\nGmail not connected. Opening auth URL...\n{link.link}\n")
+    webbrowser.open(link.link)
     return False
 
 

@@ -53,7 +53,7 @@ def connect_gmail():
         client = get_client()
         client.actions.get_or_create_connected_account(connection_name=CN, identifier=email)
         link = client.actions.get_authorization_link(identifier=email, connection_name=CN)
-        return jsonify({"url": link.url})
+        return jsonify({"url": link.link})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
