@@ -45,7 +45,7 @@ input:focus{border-color:#58a6ff}
 </nav>
 <div class="page">
   <h1>Settings</h1>
-  <p class="subtitle">Configure your Gmail connection and send permissions.</p>
+  <p class="subtitle">Configure your Gmail and Calendar connections and send permissions.</p>
 
   <!-- PROFILE -->
   <div class="section">
@@ -70,6 +70,26 @@ input:focus{border-color:#58a6ff}
         </span>
         {% if not connected %}
         <button class="btn btn-connect" id="connect-btn" onclick="connectGmail()">Connect</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="section">
+    <div class="section-title">Calendar Connection</div>
+    <div class="row">
+      <div class="row-label">
+        <h3>Google Calendar</h3>
+        <p>Used to read availability and book investor meetings via ScaleKit</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="status-badge {{ 'on' if cal_connected else 'off' }}" id="cal-badge">
+          <span class="dot"></span>
+          {{ 'Connected' if cal_connected else 'Not connected' }}
+        </span>
+        {% if not cal_connected %}
+        <button class="btn btn-connect" id="connect-cal-btn" onclick="connectCalendar()">Connect</button>
         {% endif %}
       </div>
     </div>
@@ -107,6 +127,21 @@ async function connectGmail() {
   const btn = document.getElementById('connect-btn');
   if (btn) { btn.textContent = 'Connecting...'; btn.disabled = true; }
   const res  = await fetch('/api/connect-gmail');
+  const data = await res.json();
+  if (data.url) {
+    window.open(data.url, '_blank');
+    toast('Auth page opened — complete the flow and refresh.');
+    if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
+  } else {
+    toast('Error: ' + (data.error || 'unknown'));
+    if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
+  }
+}
+
+async function connectCalendar() {
+  const btn = document.getElementById('connect-cal-btn');
+  if (btn) { btn.textContent = 'Connecting...'; btn.disabled = true; }
+  const res  = await fetch('/api/connect-calendar');
   const data = await res.json();
   if (data.url) {
     window.open(data.url, '_blank');

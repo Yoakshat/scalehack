@@ -3,6 +3,7 @@
 scalehack — investor follow-up agent
 Usage:
   python main.py auth              # connect Gmail via ScaleKit OAuth
+  python main.py cal-auth          # connect Google Calendar via ScaleKit OAuth
   python main.py run               # run morning job (dry run, prints drafts)
   python main.py run --send        # run morning job + save drafts to Gmail
   python main.py add-email <addr>  # authorize an individual investor email
@@ -17,6 +18,15 @@ def cmd_auth():
     connected = ensure_gmail_connected()
     if connected:
         print("Gmail is connected and active.")
+    else:
+        print("Auth URL opened. Complete the flow, then run this command again.")
+
+
+def cmd_cal_auth():
+    from calendar_client import ensure_calendar_connected
+    connected = ensure_calendar_connected()
+    if connected:
+        print("Google Calendar is connected and active.")
     else:
         print("Auth URL opened. Complete the flow, then run this command again.")
 
@@ -66,6 +76,8 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if not args or args[0] == "auth":
         cmd_auth()
+    elif args[0] == "cal-auth":
+        cmd_cal_auth()
     elif args[0] == "run":
         cmd_run(send="--send" in args)
     elif args[0] == "add-email" and len(args) >= 2:
