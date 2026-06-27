@@ -3,214 +3,203 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Scalehack — Live View</title>
+<title>Rai</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+:root{
+  --bg:#0c0c0e; --surface:#141418; --surface-2:#1a1a20;
+  --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+  --ink:#ECEAE3; --muted:#8C8A82; --faint:#5a5953;
+  --gold:#C8A86A; --gold-soft:rgba(200,168,106,.14); --gold-line:rgba(200,168,106,.4);
+  --hot:#C8A86A; --warm:#9a7b4f; --cold:#4a4944; --red:#c96a6a;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;overflow-x:hidden}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 
 /* NAV */
-nav{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:56px;background:#161b22;border-bottom:1px solid #30363d;position:sticky;top:0;z-index:50}
-.logo{font-size:18px;font-weight:700;letter-spacing:-0.5px;color:#fff}.logo span{color:#58a6ff}
-.nav-right{display:flex;align-items:center;gap:12px}
-.status-dot{width:8px;height:8px;border-radius:50%;background:#3fb950;display:inline-block;margin-right:4px}
-.status-dot.off{background:#f85149}
-.nav-label{font-size:13px;color:#8b949e}
-.btn{padding:8px 16px;border-radius:8px;border:none;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s}
-.btn-brief{background:#58a6ff;color:#0d1117}
-.btn-brief:hover{opacity:.85}
-.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px;background:#21262d;color:#c9d1d9;border:1px solid #30363d}
-.btn-sm:hover{background:#30363d}
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:64px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(12,12,14,.82);backdrop-filter:blur(12px);z-index:50}
+.wordmark{font-family:var(--serif);font-size:25px;font-weight:600;letter-spacing:.5px;color:var(--ink)}
+.nav-right{display:flex;align-items:center;gap:18px}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);letter-spacing:.3px;margin-right:4px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:liveglow 2.6s ease-out infinite}
+@keyframes liveglow{0%{box-shadow:0 0 0 0 rgba(200,168,106,.5)}70%{box-shadow:0 0 0 7px rgba(200,168,106,0)}100%{box-shadow:0 0 0 0 rgba(200,168,106,0)}}
+.sep{width:1px;height:12px;background:var(--line-2)}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);transition:background .3s}
+.conn-dot.ok{background:var(--gold)}.conn-dot.warn{background:var(--warm)}.conn-dot.off{background:var(--red)}
+.btn{font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:all .2s;letter-spacing:.2px}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+.btn-ghost:hover{color:var(--ink);border-color:var(--line-2)}
+.btn-gold{background:var(--gold-soft);color:var(--gold);border-color:var(--gold-line)}
+.btn-gold:hover{background:rgba(200,168,106,.22)}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
 
 /* SETUP MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
-.modal{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:36px;width:420px}
-.modal h2{font-size:20px;font-weight:600;margin-bottom:6px}
-.modal p{font-size:13px;color:#8b949e;margin-bottom:24px}
-label{display:block;font-size:12px;font-weight:500;color:#8b949e;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-input{width:100%;padding:10px 12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:15px;outline:none;margin-bottom:14px}
-input:focus{border-color:#58a6ff}
-.btn-primary{background:#58a6ff;color:#0d1117;width:100%;justify-content:center;padding:11px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer}
-.btn-primary:hover{opacity:.88}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:40px;width:440px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.modal h2{font-family:var(--serif);font-size:28px;font-weight:600;margin-bottom:8px;color:var(--ink)}
+.modal p{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.5}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px}
+input{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:15px;outline:none;margin-bottom:16px;font-family:inherit}
+input:focus{border-color:var(--gold-line)}
+.btn-primary{background:var(--gold);color:#1a1408;width:100%;padding:13px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px}
+.btn-primary:hover{filter:brightness(1.08)}
 
-/* BUBBLES CANVAS */
-.canvas{padding:40px 28px;min-height:calc(100vh - 56px)}
-.empty-state{text-align:center;padding:100px 20px;color:#484f58}
-.empty-state .icon{font-size:48px;margin-bottom:16px}
-.empty-state h3{font-size:18px;color:#8b949e;margin-bottom:8px}
-.empty-state p{font-size:14px}
-.qr-hint{margin-top:24px;display:inline-flex;align-items:center;gap:8px;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px 16px;font-size:13px;color:#8b949e;text-decoration:none}
-.qr-hint:hover{border-color:#58a6ff;color:#58a6ff}
+/* CANVAS */
+.canvas{padding:48px 32px;min-height:calc(100vh - 64px)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:140px 20px}
+.empty-title{font-family:var(--serif);font-size:34px;font-weight:600;color:var(--ink);margin-bottom:12px;letter-spacing:.5px}
+.empty-sub{font-size:14px;color:var(--muted);max-width:440px;line-height:1.65}
 
-.bubbles-grid{display:flex;flex-wrap:wrap;gap:28px;padding:8px 0}
+/* FIRM CARDS */
+.cards{display:flex;flex-direction:column;gap:10px;max-width:880px;margin:0 auto}
+.firm-card{display:flex;align-items:center;gap:18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 22px;cursor:pointer;transition:border-color .25s,background .25s}
+.firm-card:hover{border-color:var(--gold-line);background:var(--surface-2)}
+.firm-card.glow{animation:goldfade 2.2s ease-out}
+@keyframes goldfade{0%{background:var(--gold-soft)}100%{background:var(--surface)}}
+.card-monogram{width:48px;height:48px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:22px;font-weight:600;color:var(--gold);background:var(--gold-soft);border:1px solid var(--gold-line);letter-spacing:.5px}
+.card-main{flex:1;min-width:0}
+.card-name{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:var(--ink)}
+.tier-dot{width:6px;height:6px;border-radius:50%;flex:none}
+.tier-dot.hot{background:var(--hot);box-shadow:0 0 6px var(--gold)}
+.tier-dot.warm{background:var(--warm)}.tier-dot.cold{background:var(--cold)}
+.card-summary{margin-top:4px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-right{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.prio{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:4px 11px;border-radius:20px;border:1px solid transparent}
+.prio-hot{background:var(--gold-soft);color:var(--gold);border-color:var(--gold-line)}
+.prio-warm{background:rgba(154,123,79,.16);color:var(--warm)}
+.prio-cold{background:rgba(255,255,255,.05);color:var(--muted)}
+.tier-dot{width:6px;height:6px;border-radius:50%;flex:none}
+.tier-dot.hot{background:var(--hot);box-shadow:0 0 6px var(--gold)}
+.tier-dot.warm{background:var(--warm)}.tier-dot.cold{background:var(--cold)}
+.card-meta{font-size:12px;color:var(--faint);letter-spacing:.3px}
 
-/* FIRM BUBBLE */
-.firm-bubble{display:flex;flex-direction:column;align-items:center;cursor:pointer;position:relative;transition:transform .2s}
-.firm-bubble:hover{transform:translateY(-3px)}
-.bubble-ring{position:relative;width:110px;height:110px}
-.bubble-circle{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;border:2px solid transparent;transition:border-color .3s}
-.bubble-circle.hot{border-color:#f85149}
-.bubble-circle.warm{border-color:#d29922}
-.bubble-circle.cold{border-color:transparent}
-.pulse-ring{position:absolute;inset:-6px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:none}
-.pulse-ring.pulsing{animation:pulse 1.2s ease-out 3}
-@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.3);opacity:0}}
-.msg-badge{position:absolute;top:4px;right:4px;background:#58a6ff;color:#0d1117;border-radius:10px;font-size:11px;font-weight:700;padding:2px 6px;min-width:20px;text-align:center}
-.bubble-name{margin-top:10px;font-size:13px;font-weight:600;color:#c9d1d9;text-align:center;max-width:120px}
-.bubble-snippet{margin-top:4px;font-size:11px;color:#8b949e;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.memory-tag{margin-top:5px;font-size:10px;padding:2px 7px;border-radius:10px;background:#21262d;color:#8b949e}
-.memory-tag.updating{color:#d29922;background:#2d2000;animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
-
-/* TOOLTIP */
-.tooltip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px 14px;width:220px;z-index:100;pointer-events:none;opacity:0;transition:opacity .15s;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.firm-bubble:hover .tooltip{opacity:1}
-.tooltip-tier{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
-.tooltip-tier.hot{color:#f85149}.tooltip-tier.warm{color:#d29922}.tooltip-tier.cold{color:#8b949e}
-.tooltip-body{font-size:12px;color:#c9d1d9;line-height:1.6;white-space:pre-wrap}
-.tooltip-empty{font-size:12px;color:#484f58;font-style:italic}
-
-/* MORNING BRIEF PANEL */
-.brief-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;display:none;align-items:flex-end;justify-content:center}
+/* PANELS */
+.brief-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);z-index:150;display:none;align-items:center;justify-content:center;padding:32px}
 .brief-overlay.open{display:flex}
-.brief-panel{background:#161b22;border:1px solid #30363d;border-radius:16px 16px 0 0;width:100%;max-width:720px;max-height:85vh;overflow-y:auto;padding:28px}
+.brief-panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:100%;max-width:640px;max-height:86vh;overflow-y:auto;padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
 .brief-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.brief-header h2{font-size:20px;font-weight:700}
-.close-btn{background:none;border:none;color:#8b949e;font-size:22px;cursor:pointer;line-height:1}
-.close-btn:hover{color:#e6edf3}
-.brief-loading{text-align:center;padding:40px;color:#8b949e}
-.spinner{width:24px;height:24px;border:2.5px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+.brief-header h2{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--ink);letter-spacing:.5px}
+.close-btn{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;transition:color .2s}
+.close-btn:hover{color:var(--ink)}
+.brief-loading{text-align:center;padding:48px;color:var(--muted);font-size:14px}
+.spinner{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-.brief-item{background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:18px;margin-bottom:14px}
-.brief-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.brief-firm{font-size:16px;font-weight:600}
-.badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
-.badge-high{background:#3d1212;color:#f85149}
-.badge-medium{background:#2d1f00;color:#d29922}
-.badge-low{background:#0d2818;color:#3fb950}
-.brief-reason{font-size:13px;color:#8b949e;margin-bottom:14px}
-.email-preview{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:12px}
-.email-subject{font-size:13px;font-weight:600;color:#58a6ff;margin-bottom:8px}
-.email-body{font-size:13px;color:#c9d1d9;line-height:1.6;white-space:pre-wrap}
-.brief-actions{display:flex;gap:10px}
-.btn-send{background:#3fb950;color:#0d1117;padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-send:hover{opacity:.88}
+.brief-item{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:14px}
+.brief-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.brief-firm{font-size:17px;font-weight:600;color:var(--ink)}
+.badge{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;border:1px solid transparent}
+.badge-high{background:var(--gold-soft);color:var(--gold);border-color:var(--gold-line)}
+.badge-medium{background:rgba(154,123,79,.16);color:var(--warm)}
+.badge-low{background:rgba(255,255,255,.05);color:var(--muted)}
+.brief-reason{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.55}
+.email-preview{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.email-subject{font-size:13px;font-weight:600;color:var(--gold);margin-bottom:8px}
+.email-body{font-size:13px;color:var(--ink);line-height:1.65;white-space:pre-wrap}
+.brief-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn-send{background:var(--gold);color:#1a1408;padding:9px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.2px}
+.btn-send:hover{filter:brightness(1.08)}
 .btn-send:disabled{opacity:.4;cursor:not-allowed}
-.btn-gmail{background:#21262d;color:#c9d1d9;padding:8px 14px;border:1px solid #30363d;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.btn-gmail:hover{border-color:#58a6ff;color:#58a6ff}
-.sent-tag{font-size:12px;color:#3fb950;padding:8px 0;display:none}
+.btn-gmail{background:transparent;color:var(--muted);padding:9px 16px;border:1px solid var(--line-2);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-gmail:hover{border-color:var(--gold-line);color:var(--gold)}
+.sent-tag{font-size:12px;color:var(--gold);padding:6px 0;display:none}
+.sent-tag a{color:var(--gold)}
 
-/* CALENDAR SLOTS */
-.slots{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.slots-label{flex-basis:100%;font-size:12px;color:#8b949e;margin-bottom:2px}
-.slots-loading{font-size:12px;color:#8b949e}
-.slot-btn{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:500;cursor:pointer;transition:border-color .15s,background .15s}
-.slot-btn:hover{border-color:#58a6ff;color:#58a6ff;background:#1c2128}
-.slots-ok{flex-basis:100%;font-size:13px;color:#3fb950;background:#0d2818;border:1px solid #1a4d2e;border-radius:8px;padding:8px 12px}
-.slots-err{flex-basis:100%;font-size:13px;color:#f85149;background:#2d1212;border:1px solid #4d1f1f;border-radius:8px;padding:8px 12px}
+/* SLOTS + FIRM EDIT */
+.slots{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.slots-label{flex-basis:100%;font-size:12px;color:var(--muted);margin-bottom:2px}
+.slots-loading{font-size:12px;color:var(--muted)}
+.slot-btn{background:var(--surface);color:var(--ink);border:1px solid var(--line-2);border-radius:8px;padding:8px 13px;font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit}
+.slot-btn:hover{border-color:var(--gold-line);color:var(--gold)}
+.slots-ok{flex-basis:100%;font-size:13px;color:var(--gold);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:8px;padding:9px 13px}
+.slots-ok a{color:var(--gold)}
+.slots-err{flex-basis:100%;font-size:13px;color:var(--red);background:rgba(201,106,106,.1);border:1px solid rgba(201,106,106,.3);border-radius:8px;padding:9px 13px}
+.section-sub{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px}
+.firm-input{width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--gold);font-size:13px;font-weight:600;margin-bottom:8px;outline:none;font-family:inherit}
+.firm-textarea{width:100%;min-height:160px;padding:13px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:13px;line-height:1.65;outline:none;resize:vertical;font-family:inherit}
+.firm-input:focus,.firm-textarea:focus{border-color:var(--gold-line)}
 </style>
 </head>
 <body>
 
-<!-- SETUP MODAL (if no profile) -->
+<!-- SETUP MODAL -->
 <div class="modal-bg" id="setup-modal" style="display:none">
   <div class="modal">
-    <h2>Welcome to Scalehack</h2>
-    <p>Set up your founder profile to get started.</p>
+    <h2>Welcome to Rai</h2>
+    <p>Set up your founder profile to begin. Your inbox becomes your dashboard.</p>
     <label>Your name</label>
-    <input type="text" id="s-name" placeholder="Akshat"/>
+    <input type="text" id="s-name" placeholder="Aryan"/>
     <label>Your email</label>
     <input type="email" id="s-email" placeholder="you@startup.com"/>
-    <button class="btn-primary" onclick="submitSetup()">Get started →</button>
+    <button class="btn-primary" onclick="submitSetup()">Get started</button>
   </div>
 </div>
 
 <!-- NAV -->
 <nav>
-  <div class="logo">scale<span>hack</span></div>
+  <div class="wordmark">Rai</div>
   <div class="nav-right">
-    <span class="nav-label"><span class="status-dot" id="gmail-dot"></span><span id="gmail-label">checking...</span></span>
-    <span class="nav-label"><span class="status-dot" id="cal-dot"></span><span id="cal-label">checking...</span></span>
-    <a href="/qr" target="_blank" class="btn btn-sm">Show QR</a>
-    <a href="/settings" class="btn btn-sm">Settings</a>
-    <button class="btn btn-brief" onclick="openBrief()">Morning Brief</button>
+    <div class="status">
+      <span class="live-dot"></span><span>Live</span>
+      <span class="sep"></span>
+      <span class="conn-dot" id="conn-dot"></span><span id="conn-label">…</span>
+    </div>
+    <button class="btn btn-ghost" id="sync-btn" onclick="syncInbox()">Sync</button>
+    <a href="/settings" class="btn btn-ghost">Settings</a>
   </div>
 </nav>
 
-<!-- MAIN CANVAS -->
+<!-- MAIN -->
 <div class="canvas">
   <div class="empty-state" id="empty-state">
-    <div class="icon">📡</div>
-    <h3>Waiting for investors...</h3>
-    <p>Share the QR code and watch firm bubbles appear in real time.</p>
-    <a href="/qr" target="_blank" class="qr-hint">📲 Open QR Code</a>
+    <div class="empty-title">Awaiting signal</div>
+    <div class="empty-sub">Investor and customer emails land here automatically — read, classified, and prioritized in real time.</div>
   </div>
-  <div class="bubbles-grid" id="bubbles-grid"></div>
+  <div class="cards" id="cards"></div>
 </div>
 
-<!-- MORNING BRIEF PANEL -->
-<div class="brief-overlay" id="brief-overlay">
+<!-- FIRM DETAIL PANEL -->
+<div class="brief-overlay" id="firm-overlay">
   <div class="brief-panel">
     <div class="brief-header">
-      <h2>Morning Brief</h2>
-      <button class="close-btn" onclick="closeBrief()">×</button>
+      <h2 id="firm-title">Firm</h2>
+      <button class="close-btn" onclick="closeFirm()">&times;</button>
     </div>
-    <div id="brief-content">
-      <div class="brief-loading"><div class="spinner"></div>Analyzing investor signals...</div>
+    <div id="firm-content">
+      <div class="brief-loading"><div class="spinner"></div>Loading…</div>
     </div>
   </div>
 </div>
 
 <script>
-const COLORS = ['#1f6feb','#388bfd','#56d364','#e3b341','#f85149','#db61a2','#79c0ff','#d2a8ff'];
-let firmColors = {};
-let colorIdx = 0;
-let firmData = {};
 let prevMessageCounts = {};
-let pulsingFirms = new Set();
-
-function getFirmColor(firmId) {
-  if (!firmColors[firmId]) { firmColors[firmId] = COLORS[colorIdx++ % COLORS.length]; }
-  return firmColors[firmId];
-}
+let firstLoad = true;
 
 function initials(name) {
-  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  return (name||'?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 }
-
 function truncate(str, n) {
   return str && str.length > n ? str.slice(0,n) + '…' : (str || '');
 }
 
-// Check profile on load
+// ── Profile + connections ─────────────────────────────────────────────────────
 async function checkProfile() {
-  const res = await fetch('/api/firms');
-  const firms = await res.json();
-  // If we can reach the API, profile check via setup modal
-  const profileRes = await fetch('/api/auth-status');
-  // Show setup modal if no founder email set
   const stored = localStorage.getItem('founder_setup_done');
   if (!stored) { document.getElementById('setup-modal').style.display = 'flex'; }
-  checkGmailStatus();
-  checkCalendarStatus();
+  checkConnections();
 }
 
-async function checkGmailStatus() {
-  try {
-    const r = await fetch('/api/auth-status');
-    const d = await r.json();
-    document.getElementById('gmail-dot').className = 'status-dot' + (d.connected ? '' : ' off');
-    document.getElementById('gmail-label').textContent = d.connected ? 'Gmail connected' : 'Gmail not connected';
-  } catch(e) {}
-}
-
-async function checkCalendarStatus() {
-  try {
-    const r = await fetch('/api/calendar-status');
-    const d = await r.json();
-    document.getElementById('cal-dot').className = 'status-dot' + (d.connected ? '' : ' off');
-    document.getElementById('cal-label').textContent = d.connected ? 'Calendar connected' : 'Calendar not connected';
-  } catch(e) {}
+async function checkConnections() {
+  let g = false, c = false;
+  try { g = (await (await fetch('/api/auth-status')).json()).connected; } catch(e) {}
+  try { c = (await (await fetch('/api/calendar-status')).json()).connected; } catch(e) {}
+  const dot = document.getElementById('conn-dot'), lab = document.getElementById('conn-label');
+  if (g && c) { dot.className = 'conn-dot ok'; lab.textContent = 'Connected'; }
+  else if (!g && !c) { dot.className = 'conn-dot off'; lab.textContent = 'Not connected'; }
+  else { dot.className = 'conn-dot warn'; lab.textContent = g ? 'Calendar off' : 'Gmail off'; }
 }
 
 async function submitSetup() {
@@ -220,212 +209,188 @@ async function submitSetup() {
   await fetch('/api/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email}) });
   localStorage.setItem('founder_setup_done','1');
   document.getElementById('setup-modal').style.display = 'none';
-  checkGmailStatus();
-  checkCalendarStatus();
+  checkConnections();
 }
 
-// ── Polling ──────────────────────────────────────────────────────────────────
+// ── Polling → cards ───────────────────────────────────────────────────────────
 async function poll() {
   try {
     const res  = await fetch('/api/firms');
     const firms = await res.json();
-    renderBubbles(firms);
+    renderCards(firms);
   } catch(e) {}
 }
 
-function renderBubbles(firms) {
-  const grid  = document.getElementById('bubbles-grid');
+const TIER_RANK  = { hot: 0, warm: 1, cold: 2 };
+const TIER_LABEL = { hot: 'High', warm: 'Medium', cold: 'Low' };
+
+function renderCards(firms) {
+  const grid  = document.getElementById('cards');
   const empty = document.getElementById('empty-state');
 
-  if (!firms.length) { empty.style.display = 'block'; grid.innerHTML = ''; return; }
+  if (!firms.length) { empty.style.display = 'flex'; grid.innerHTML = ''; return; }
   empty.style.display = 'none';
 
-  firms.forEach(firm => {
+  // Auto-prioritize: highest tier first, then most recent.
+  const sorted = [...firms].sort((a, b) => {
+    const ra = TIER_RANK[a.tier || 'cold'], rb = TIER_RANK[b.tier || 'cold'];
+    if (ra !== rb) return ra - rb;
+    return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0);
+  });
+
+  sorted.forEach(firm => {
     const id    = firm.firm_id;
     const count = firm.message_count;
     const prev  = prevMessageCounts[id] || 0;
     const isNew = count > prev;
     prevMessageCounts[id] = count;
 
-    const color   = getFirmColor(id);
     const tier    = firm.tier || 'cold';
-    const summary = firm.summary || '';
-    const snippet = truncate(firm.latest_text, 38);
-    const memAge  = firm.memory_updated_at && firm.last_message_at
-                  ? new Date(firm.memory_updated_at) < new Date(firm.last_message_at)
-                  : false;
+    const summary = firm.summary || firm.latest_text || '';
 
-    let el = document.getElementById(`bubble-${id}`);
+    let el = document.getElementById(`card-${id}`);
     if (!el) {
       el = document.createElement('div');
-      el.id = `bubble-${id}`;
-      el.className = 'firm-bubble';
-      grid.appendChild(el);
+      el.id = `card-${id}`;
+      el.className = 'firm-card';
+      el.onclick = () => openFirm(id, firm.firm_name);
     }
+    // Re-append in sorted order so the DOM reflects priority.
+    grid.appendChild(el);
+    // Only glow for genuinely new arrivals — not the initial page load.
+    if (isNew && !firstLoad) { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); }
 
     el.innerHTML = `
-      <div class="bubble-ring">
-        <div class="bubble-circle ${tier}" style="background:${color}22;border-color:${tier==='hot'?'#f85149':tier==='warm'?'#d29922':color}">
-          <span style="color:${color}">${initials(firm.firm_name)}</span>
-        </div>
-        <span class="pulse-ring ${isNew?'pulsing':''}" style="color:${color}"></span>
-        <span class="msg-badge">${count}</span>
+      <div class="card-monogram">${initials(firm.firm_name)}</div>
+      <div class="card-main">
+        <div class="card-name">${escHtml(firm.firm_name)}</div>
+        <div class="card-summary">${escHtml(truncate(summary, 96))}</div>
       </div>
-      <div class="bubble-name">${firm.firm_name}</div>
-      <div class="bubble-snippet">${snippet}</div>
-      <div class="memory-tag ${memAge?'updating':''}">
-        ${memAge ? 'updating memory...' : (summary ? 'memory updated' : 'no memory yet')}
-      </div>
-      <div class="tooltip">
-        <div class="tooltip-tier ${tier}">${tier.toUpperCase()}</div>
-        ${summary
-          ? `<div class="tooltip-body">${summary}</div>`
-          : `<div class="tooltip-empty">Memory building...</div>`}
+      <div class="card-right">
+        <span class="prio prio-${tier}"><span class="tier-dot ${tier}"></span>${TIER_LABEL[tier]}</span>
+        <span class="card-meta">${count} ${count==1?'msg':'msgs'}</span>
       </div>`;
   });
 
-  // Remove bubbles for firms no longer present
   const ids = new Set(firms.map(f => f.firm_id));
-  grid.querySelectorAll('.firm-bubble').forEach(el => {
-    if (!ids.has(el.id.replace('bubble-',''))) el.remove();
+  grid.querySelectorAll('.firm-card').forEach(el => {
+    if (!ids.has(el.id.replace('card-',''))) el.remove();
   });
+
+  firstLoad = false;
 }
 
-// ── Morning Brief ─────────────────────────────────────────────────────────────
-function openBrief() {
-  document.getElementById('brief-overlay').classList.add('open');
-  document.getElementById('brief-content').innerHTML =
-    '<div class="brief-loading"><div class="spinner"></div>Analyzing investor signals via RAG...</div>';
-  runBrief();
-}
-
-function closeBrief() {
-  document.getElementById('brief-overlay').classList.remove('open');
-}
-
-async function runBrief() {
+// ── Sync inbox ────────────────────────────────────────────────────────────────
+async function syncInbox() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true; btn.textContent = 'Syncing…';
   try {
-    const res  = await fetch('/api/brief', {method:'POST'});
-    const data = await res.json();
-    renderBrief(data.results || []);
-  } catch(e) {
-    document.getElementById('brief-content').innerHTML = `<p style="color:#f85149">Error: ${e.message}</p>`;
-  }
+    const res = await fetch('/api/sync-inbox', {method:'POST'});
+    const d = await res.json();
+    btn.textContent = d.ok ? `+${d.relevant}` : 'Error';
+    poll();
+  } catch(e) { btn.textContent = 'Error'; }
+  setTimeout(() => { btn.textContent = 'Sync'; btn.disabled = false; }, 2000);
 }
 
-function renderBrief(results) {
-  if (!results.length) {
-    document.getElementById('brief-content').innerHTML =
-      '<p style="color:#8b949e;text-align:center;padding:40px">No investor data yet.</p>';
-    return;
-  }
+// ── Firm detail ───────────────────────────────────────────────────────────────
+let currentFirm = null;
 
-  const html = results.map((r,i) => `
-    <div class="brief-item" id="brief-item-${i}">
+async function openFirm(firmId, firmName) {
+  currentFirm = firmId;
+  document.getElementById('firm-title').textContent = firmName;
+  document.getElementById('firm-overlay').classList.add('open');
+  document.getElementById('firm-content').innerHTML =
+    '<div class="brief-loading"><div class="spinner"></div>Loading signals & draft…</div>';
+  try {
+    const res = await fetch(`/api/firm/${encodeURIComponent(firmId)}`);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    renderFirm(d);
+  } catch(e) {
+    document.getElementById('firm-content').innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`;
+  }
+}
+function closeFirm() { document.getElementById('firm-overlay').classList.remove('open'); currentFirm = null; }
+
+function renderFirm(d) {
+  const msgs = (d.messages || []).map(m =>
+    `<div class="email-preview"><div class="email-body">${escHtml(m.text)}</div></div>`).join('');
+  document.getElementById('firm-content').innerHTML = `
+    <div class="brief-item">
       <div class="brief-item-header">
-        <div class="brief-firm">${r.firm_name}</div>
-        <span class="badge badge-${r.urgency}">${r.urgency}</span>
+        <div class="brief-firm">${escHtml(d.firm_name)}</div>
+        <span class="badge badge-${d.urgency}">${d.urgency}</span>
       </div>
-      <div class="brief-reason">${r.reason}</div>
+      <div class="brief-reason">${escHtml(d.reason || d.summary || '')}</div>
+      <div class="section-sub">Recent messages</div>
+      ${msgs || '<div class="brief-reason">No messages yet.</div>'}
+      <div class="section-sub">Suggested draft</div>
       <div class="email-preview">
-        <div class="email-subject">Subject: ${r.email_subject}</div>
-        <div class="email-body">${escHtml(r.email_body)}</div>
+        <input id="f-subject" class="firm-input" value="${escHtml(d.email_subject)}"/>
+        <textarea id="f-body" class="firm-textarea">${escHtml(d.email_body)}</textarea>
       </div>
       <div class="brief-actions">
-        <button class="btn-send" id="send-btn-${i}" onclick="sendEmail(${i}, '${escAttr(r.email_subject)}', '${escAttr(r.email_body)}', '${r.firm_id}', '${escAttr(r.investor_email||'')}')">
-          ✉ Send Draft to Gmail
-        </button>
-        <button class="btn-gmail" id="times-btn-${i}" onclick="suggestTimes(${i}, '${escAttr(r.firm_name)}', '${escAttr(r.investor_email||'')}')">
-          📅 Suggest times
-        </button>
-        <span class="sent-tag" id="sent-${i}">✓ Draft saved — <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" style="color:#3fb950">Open Gmail →</a></span>
-        <span class="sent-tag" id="err-${i}" style="color:#f85149"></span>
+        <button class="btn-send" id="f-send-btn" onclick="sendFirmEmail('${escAttr(d.firm_id)}','${escAttr(d.investor_email||'')}')">Send draft</button>
+        <button class="btn-gmail" id="f-times-btn" onclick="firmSuggestTimes('${escAttr(d.firm_name)}','${escAttr(d.investor_email||'')}')">Send calendar invite</button>
+        <span class="sent-tag" id="f-sent">Draft saved — <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank">Open Gmail</a></span>
+        <span class="sent-tag" id="f-err" style="color:var(--red)"></span>
       </div>
-      <div class="slots" id="slots-${i}"></div>
-    </div>`).join('');
-
-  document.getElementById('brief-content').innerHTML = html;
+      <div class="slots" id="f-slots"></div>
+    </div>`;
 }
 
-async function sendEmail(idx, subject, body, firmId, to) {
-  const btn = document.getElementById(`send-btn-${idx}`);
-  const tag = document.getElementById(`sent-${idx}`);
-  const err = document.getElementById(`err-${idx}`);
-  btn.disabled = true;
-  btn.textContent = 'Saving draft...';
+async function sendFirmEmail(firmId, to) {
+  const btn = document.getElementById('f-send-btn');
+  const subject = document.getElementById('f-subject').value;
+  const body = document.getElementById('f-body').value;
+  btn.disabled = true; btn.textContent = 'Saving…';
   try {
-    const res  = await fetch('/api/send-email', {
+    const res = await fetch('/api/send-email', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({subject, body, firm_id: firmId, to})
     });
     const data = await res.json();
-    if (data.ok) {
-      btn.style.display = 'none';
-      tag.style.display = 'inline-flex';
-    } else {
-      err.textContent = '✗ ' + (data.error || 'Draft failed — check Gmail connection in Settings');
-      err.style.display = 'inline-flex';
-      btn.disabled = false;
-      btn.textContent = '✉ Retry';
-    }
-  } catch(e) {
-    btn.disabled = false;
-    btn.textContent = 'Retry';
-  }
+    if (data.ok) { btn.style.display='none'; document.getElementById('f-sent').style.display='inline-flex'; }
+    else { document.getElementById('f-err').textContent=(data.error||'Draft failed'); document.getElementById('f-err').style.display='inline-flex'; btn.disabled=false; btn.textContent='Retry'; }
+  } catch(e) { btn.disabled=false; btn.textContent='Retry'; }
 }
 
-// ── Calendar: suggest times + book ────────────────────────────────────────────
-async function suggestTimes(idx, firmName, investorEmail) {
-  const btn  = document.getElementById(`times-btn-${idx}`);
-  const cont = document.getElementById(`slots-${idx}`);
+async function firmSuggestTimes(firmName, investorEmail) {
+  const btn = document.getElementById('f-times-btn');
+  const cont = document.getElementById('f-slots');
   btn.disabled = true;
   cont.innerHTML = '<div class="slots-loading">Checking your calendar…</div>';
   try {
-    const res  = await fetch('/api/availability');
+    const res = await fetch('/api/availability');
     const data = await res.json();
     const slots = data.slots || [];
-    if (!slots.length) {
-      cont.innerHTML = `<div class="slots-err">${data.error ? 'Calendar error — connect it in Settings.' : 'No open slots found.'}</div>`;
-      btn.disabled = false;
-      return;
-    }
-    cont.innerHTML = '<div class="slots-label">Pick a time to book on your calendar:</div>' +
-      slots.map(s => `<button class="slot-btn" onclick='bookSlot(${idx}, ${JSON.stringify(s)}, "${escAttr(firmName)}", "${escAttr(investorEmail)}")'>${s.label}</button>`).join('');
+    if (!slots.length) { cont.innerHTML = `<div class="slots-err">${data.error?'Calendar error — connect it in Settings.':'No open slots found.'}</div>`; btn.disabled=false; return; }
+    cont.innerHTML = '<div class="slots-label">Pick a time — sends a calendar invite to the sender:</div>' +
+      slots.map(s => `<button class="slot-btn" onclick='firmBook(${JSON.stringify(s)}, "${escAttr(firmName)}", "${escAttr(investorEmail)}")'>${s.label}</button>`).join('');
     btn.disabled = false;
-  } catch(e) {
-    cont.innerHTML = `<div class="slots-err">✗ ${e.message}</div>`;
-    btn.disabled = false;
-  }
+  } catch(e) { cont.innerHTML = `<div class="slots-err">${e.message}</div>`; btn.disabled=false; }
 }
 
-async function bookSlot(idx, slot, firmName, investorEmail) {
-  const cont = document.getElementById(`slots-${idx}`);
-  cont.innerHTML = '<div class="slots-loading">Booking…</div>';
+async function firmBook(slot, firmName, investorEmail) {
+  const cont = document.getElementById('f-slots');
+  cont.innerHTML = '<div class="slots-loading">Sending invite…</div>';
   try {
     const res = await fetch('/api/schedule', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        start: slot.start,
-        summary: `Investor follow-up: ${firmName}`,
-        description: 'Scheduled via scalehack.',
-        to: investorEmail || ''
-      })
+      body: JSON.stringify({ start: slot.start, summary: `Intro: ${firmName}`, description: 'Scheduled via Rai.', to: investorEmail || '' })
     });
     const data = await res.json();
     if (data.ok) {
       const link = data.event && data.event.html_link;
-      cont.innerHTML = `<div class="slots-ok">✓ Booked ${slot.label}` +
-        (link ? ` — <a href="${link}" target="_blank" style="color:#3fb950">View event →</a>` : '') + '</div>';
-    } else {
-      cont.innerHTML = `<div class="slots-err">✗ ${data.error || 'Could not book.'}</div>`;
-    }
-  } catch(e) {
-    cont.innerHTML = `<div class="slots-err">✗ ${e.message}</div>`;
-  }
+      const who = investorEmail ? ` — invite sent to ${investorEmail}` : '';
+      cont.innerHTML = `<div class="slots-ok">Booked ${slot.label}${who}` + (link?` — <a href="${link}" target="_blank">View event</a>`:'') + '</div>';
+    } else { cont.innerHTML = `<div class="slots-err">${data.error||'Could not book.'}</div>`; }
+  } catch(e) { cont.innerHTML = `<div class="slots-err">${e.message}</div>`; }
 }
 
 function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
-function escAttr(s){ return (s||'').replace(/'/g,"\\'").replace(/\n/g,'\\n') }
+function escAttr(s){ return (s||'').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/"/g,'&quot;') }
 
 // Init
 checkProfile();

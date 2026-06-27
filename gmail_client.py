@@ -49,6 +49,42 @@ def _get_identifier() -> str:
     return email
 
 
+def _parse_message(m: dict) -> dict:
+    """Flatten a raw Gmail message into {id, from, sender_name, sender_email, subject, date, snippet}."""
+    payload = m.get("payload", {}) or {}
+    headers = {h.get("name", "").lower(): h.get("value", "") for h in payload.get("headers", [])}
+    frm = headers.get("from", "")
+    if "<" in frm and ">" in frm:
+        sender_email = frm.split("<", 1)[1].split(">", 1)[0].strip()
+        sender_name = frm.split("<", 1)[0].strip().strip('"')
+    else:
+        sender_email = frm.strip()
+        sender_name = frm.strip()
+    return {
+        "id": m.get("id", ""),
+        "from": frm,
+        "sender_name": sender_name or sender_email,
+        "sender_email": sender_email,
+        "subject": headers.get("subject", "(no subject)"),
+        "date": headers.get("date", ""),
+        "snippet": m.get("snippet", "") or "",
+    }
+
+
+def fetch_recent_emails(max_results: int = 15, query: str = "in:inbox") -> list[dict]:
+    """Fetch recent inbox messages, parsed into clean dicts for ingestion."""
+    client = get_client()
+    response = client.actions.execute_tool(
+        tool_name="gmail_fetch_mails",
+        identifier=_get_identifier(),
+        connection_name=GMAIL_CONNECTION_NAME,
+        tool_input={"query": query, "max_results": max_results},
+    )
+    data = response.data or {}
+    msgs = data.get("messages", data.get("emails", []))
+    return [_parse_message(m) for m in msgs]
+
+
 def fetch_emails(query: str = "", max_results: int = 50) -> list[dict]:
     """Fetch emails matching query. Returns list of email dicts."""
     client = get_client()

@@ -31,7 +31,24 @@ def init_db():
                 key TEXT PRIMARY KEY,
                 value TEXT
             );
+            CREATE TABLE IF NOT EXISTS processed_emails (
+                gmail_id TEXT PRIMARY KEY,
+                relevant INTEGER DEFAULT 0,
+                processed_at TEXT DEFAULT (datetime('now'))
+            );
         """)
+
+def is_email_processed(gmail_id):
+    with get_db() as conn:
+        row = conn.execute("SELECT 1 FROM processed_emails WHERE gmail_id = ?", (gmail_id,)).fetchone()
+        return row is not None
+
+def mark_email_processed(gmail_id, relevant):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO processed_emails (gmail_id, relevant) VALUES (?, ?)",
+            (gmail_id, 1 if relevant else 0)
+        )
 
 def add_message(firm_id, firm_name, sender_name, text, sender_email=""):
     with get_db() as conn:

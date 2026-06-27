@@ -105,37 +105,31 @@ def get_memory(firm_id):
 
 # ── API: Morning Brief ─────────────────────────────────────────────────────────
 
-@app.route("/api/brief", methods=["POST"])
-def morning_brief():
-    firms = db.get_all_firms()
-    if not firms:
-        return jsonify({"results": []})
+def _brief_for_firm(firm: dict) -> dict:
+    """Build an urgency + draft email for a single firm using its stored messages."""
+    firm_id   = firm["firm_id"]
+    firm_name = firm["firm_name"]
+    messages  = db.get_firm_messages(firm_id, limit=10)
+    msg_text  = "\n".join(f"- {m['sender_name']}: {m['text']}" for m in messages)
 
-    results = []
-    for firm in firms:
-        firm_id   = firm["firm_id"]
-        firm_name = firm["firm_name"]
-        messages  = db.get_firm_messages(firm_id, limit=10)
-        msg_text  = "\n".join(f"- {m['sender_name']}: {m['text']}" for m in messages)
+    # RAG: pull top memories from VectorAI (optional)
+    rag_context = ""
+    try:
+        from memory import search_firm_memory
+        hits = search_firm_memory(firm_id, "follow up commitment interest urgent traction", limit=4)
+        if hits:
+            rag_context = "\n".join(f"- [{h.get('tier','?')}] {h.get('snippet','')[:150]}" for h in hits)
+    except Exception:
+        pass
 
-        # RAG: pull top memories from VectorAI
-        rag_context = ""
-        try:
-            from memory import search_firm_memory
-            hits = search_firm_memory(firm_id, "follow up commitment interest urgent traction", limit=4)
-            if hits:
-                rag_context = "\n".join(f"- [{h.get('tier','?')}] {h.get('snippet','')[:150]}" for h in hits)
-        except Exception:
-            pass
-
-        prompt = f"""Investor firm: {firm_name}
+    prompt = f"""Sender / firm: {firm_name}
 Their messages:
 {msg_text}
 
 Memory context (most relevant past signals):
 {rag_context or '(none yet)'}
 
-You are helping a startup founder decide whether to follow up with this investor.
+You are helping a startup founder decide whether to follow up with this contact.
 Return ONLY valid JSON:
 {{
   "urgency": "high" | "medium" | "low",
@@ -144,33 +138,72 @@ Return ONLY valid JSON:
   "email_body": "<draft follow-up email body, under 120 words, warm and specific>"
 }}"""
 
-        try:
-            import re
-            raw = _llm(prompt, max_tokens=500)
-            match = re.search(r"\{.*\}", raw, re.DOTALL)
-            result = json.loads(match.group()) if match else {}
-        except Exception as e:
-            result = {"urgency": "low", "reason": str(e), "email_subject": "", "email_body": ""}
+    try:
+        import re
+        raw = _llm(prompt, max_tokens=500)
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        result = json.loads(match.group()) if match else {}
+    except Exception as e:
+        result = {"urgency": "low", "reason": str(e), "email_subject": "", "email_body": ""}
 
-        # get latest investor email for the to: field
-        latest_msg = messages[-1] if messages else {}
-        investor_email = latest_msg.get("sender_email", "")
+    latest_msg = messages[-1] if messages else {}
+    investor_email = latest_msg.get("sender_email", "")
 
-        results.append({
-            "firm_id":        firm_id,
-            "firm_name":      firm_name,
-            "urgency":        result.get("urgency", "low"),
-            "reason":         result.get("reason", ""),
-            "email_subject":  result.get("email_subject", f"Following up — {firm_name}"),
-            "email_body":     result.get("email_body", ""),
-            "investor_email": investor_email,
-            "message_count":  firm["message_count"],
-            "last_contact":   firm["last_message_at"],
-        })
+    return {
+        "firm_id":        firm_id,
+        "firm_name":      firm_name,
+        "urgency":        result.get("urgency", "low"),
+        "reason":         result.get("reason", ""),
+        "email_subject":  result.get("email_subject", f"Following up — {firm_name}"),
+        "email_body":     result.get("email_body", ""),
+        "investor_email": investor_email,
+        "summary":        firm.get("summary", ""),
+        "tier":           firm.get("tier", "cold"),
+        "messages":       messages,
+        "message_count":  firm["message_count"],
+        "last_contact":   firm["last_message_at"],
+    }
+
+
+@app.route("/api/brief", methods=["POST"])
+def morning_brief():
+    firms = db.get_all_firms()
+    if not firms:
+        return jsonify({"results": []})
+
+    results = [_brief_for_firm(firm) for firm in firms]
+    # Strip heavy fields not needed in the list view
+    for r in results:
+        r.pop("messages", None)
 
     order = {"high": 0, "medium": 1, "low": 2}
     results.sort(key=lambda x: order.get(x["urgency"], 3))
     return jsonify({"results": results})
+
+
+@app.route("/api/firm/<firm_id>")
+def firm_detail(firm_id):
+    firms = db.get_all_firms()
+    firm = next((f for f in firms if f["firm_id"] == firm_id), None)
+    if not firm:
+        return jsonify({"error": "firm not found"}), 404
+    return jsonify(_brief_for_firm(firm))
+
+
+# ── API: Inbox watcher ─────────────────────────────────────────────────────────
+
+@app.route("/api/inbox-status")
+def inbox_status():
+    from inbox_watcher import get_status
+    return jsonify(get_status())
+
+@app.route("/api/sync-inbox", methods=["POST"])
+def sync_inbox():
+    try:
+        from inbox_watcher import sync_once
+        return jsonify({"ok": True, **sync_once()})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ── API: Send / Draft email ────────────────────────────────────────────────────
@@ -235,7 +268,7 @@ def schedule():
         event = create_event(
             start=start,
             summary=data.get("summary", "Investor follow-up"),
-            description=data.get("description", "Scheduled via scalehack."),
+            description=data.get("description", "Scheduled via Rai."),
             attendees=[data["to"]] if data.get("to") else None,
         )
         return jsonify({"ok": True, "event": event})
@@ -358,4 +391,12 @@ def _get_local_ip() -> str:
 
 
 if __name__ == "__main__":
+    # Start the live Gmail watcher only in the reloader's worker process
+    # (avoids a duplicate watcher in the debug supervisor process).
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        try:
+            from inbox_watcher import start_watcher
+            start_watcher()
+        except Exception as e:
+            print(f"[inbox] failed to start watcher: {e}")
     app.run(debug=True, port=8080, host="0.0.0.0")
