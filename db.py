@@ -16,6 +16,7 @@ def init_db():
                 firm_id TEXT NOT NULL,
                 firm_name TEXT NOT NULL,
                 sender_name TEXT NOT NULL,
+                sender_email TEXT DEFAULT '',
                 text TEXT NOT NULL,
                 created_at TEXT DEFAULT (datetime('now'))
             );
@@ -32,11 +33,11 @@ def init_db():
             );
         """)
 
-def add_message(firm_id, firm_name, sender_name, text):
+def add_message(firm_id, firm_name, sender_name, text, sender_email=""):
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO messages (firm_id, firm_name, sender_name, text) VALUES (?, ?, ?, ?)",
-            (firm_id, firm_name, sender_name, text)
+            "INSERT INTO messages (firm_id, firm_name, sender_name, sender_email, text) VALUES (?, ?, ?, ?, ?)",
+            (firm_id, firm_name, sender_name, sender_email, text)
         )
         conn.execute(
             "INSERT OR IGNORE INTO firm_memories (firm_id, firm_name) VALUES (?, ?)",

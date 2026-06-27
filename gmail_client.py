@@ -83,10 +83,17 @@ def fetch_investor_emails(investor_domains: list[str], individual_emails: list[s
 def create_draft(to: str, subject: str, body: str) -> dict:
     """Create a Gmail draft on behalf of the founder."""
     client = get_client()
-    response = client.actions.execute_tool(
-        tool_name="gmail_create_draft",
-        identifier=_get_identifier(),
-        connection_name=GMAIL_CONNECTION_NAME,
-        tool_input={"to": to, "subject": subject, "body": body},
-    )
-    return response.data or {}
+    identifier = _get_identifier()
+    # Try draft tool first, fall back to send tool
+    for tool_name in ["gmail_create_draft", "gmail_send_email"]:
+        try:
+            response = client.actions.execute_tool(
+                tool_name=tool_name,
+                identifier=identifier,
+                connection_name=GMAIL_CONNECTION_NAME,
+                tool_input={"to": to, "subject": subject, "body": body},
+            )
+            return {"tool_used": tool_name, **(response.data or {})}
+        except Exception as e:
+            last_err = str(e)
+    return {"error": last_err}

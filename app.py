@@ -69,15 +69,16 @@ def qr_view():
 @app.route("/api/message", methods=["POST"])
 def post_message():
     data = request.json or {}
-    firm_id   = data.get("firm_id", "").strip()
-    firm_name = FIRM_MAP.get(firm_id, firm_id)
-    sender    = data.get("sender_name", "Investor").strip()
-    text      = data.get("text", "").strip()
+    firm_id      = data.get("firm_id", "").strip()
+    firm_name    = FIRM_MAP.get(firm_id, firm_id)
+    sender       = data.get("sender_name", "Investor").strip()
+    sender_email = data.get("sender_email", "").strip()
+    text         = data.get("text", "").strip()
 
     if not firm_id or not text:
         return jsonify({"error": "firm_id and text required"}), 400
 
-    db.add_message(firm_id, firm_name, sender, text)
+    db.add_message(firm_id, firm_name, sender, text, sender_email)
 
     # background: embed + update memory
     threading.Thread(target=_process_message, args=(firm_id, firm_name, sender, text), daemon=True).start()
@@ -149,15 +150,20 @@ Return ONLY valid JSON:
         except Exception as e:
             result = {"urgency": "low", "reason": str(e), "email_subject": "", "email_body": ""}
 
+        # get latest investor email for the to: field
+        latest_msg = messages[-1] if messages else {}
+        investor_email = latest_msg.get("sender_email", "")
+
         results.append({
-            "firm_id":       firm_id,
-            "firm_name":     firm_name,
-            "urgency":       result.get("urgency", "low"),
-            "reason":        result.get("reason", ""),
-            "email_subject": result.get("email_subject", f"Following up — {firm_name}"),
-            "email_body":    result.get("email_body", ""),
-            "message_count": firm["message_count"],
-            "last_contact":  firm["last_message_at"],
+            "firm_id":        firm_id,
+            "firm_name":      firm_name,
+            "urgency":        result.get("urgency", "low"),
+            "reason":         result.get("reason", ""),
+            "email_subject":  result.get("email_subject", f"Following up — {firm_name}"),
+            "email_body":     result.get("email_body", ""),
+            "investor_email": investor_email,
+            "message_count":  firm["message_count"],
+            "last_contact":   firm["last_message_at"],
         })
 
     order = {"high": 0, "medium": 1, "low": 2}
@@ -175,12 +181,12 @@ def send_email():
     firm_id = data.get("firm_id", "")
     permission = db.get_setting("permission", "confirm")
 
-    if permission == "auto_send":
-        result = _create_gmail_draft(subject, body)
-        return jsonify({"ok": True, "auto": True, "draft_url": "https://mail.google.com/mail/u/0/#drafts", **result})
-    else:
-        result = _create_gmail_draft(subject, body)
-        return jsonify({"ok": True, "auto": False, "draft_url": "https://mail.google.com/mail/u/0/#drafts", **result})
+    to      = data.get("to", "")
+    result  = _create_gmail_draft(to=to, subject=subject, body=body)
+    auto    = permission == "auto_send"
+    return jsonify({"ok": result.get("ok", False), "auto": auto,
+                    "draft_url": "https://mail.google.com/mail/u/0/#drafts",
+                    "error": result.get("error"), "result": result.get("result")})
 
 
 # ── API: Gmail / Settings ──────────────────────────────────────────────────────
@@ -248,13 +254,13 @@ def _gmail_connected() -> bool:
     except Exception:
         return False
 
-def _create_gmail_draft(subject: str, body: str) -> dict:
+def _create_gmail_draft(to: str, subject: str, body: str) -> dict:
     try:
         from gmail_client import create_draft
-        result = create_draft(to="", subject=subject, body=body)
-        return {"gmail_result": result}
+        result = create_draft(to=to, subject=subject, body=body)
+        return {"ok": True, "result": result}
     except Exception as e:
-        return {"gmail_error": str(e)}
+        return {"ok": False, "error": str(e)}
 
 def _process_message(firm_id: str, firm_name: str, sender: str, text: str):
     """Background: embed message + update memory summary."""

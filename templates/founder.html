@@ -311,31 +311,38 @@ function renderBrief(results) {
         <div class="email-body">${escHtml(r.email_body)}</div>
       </div>
       <div class="brief-actions">
-        <button class="btn-send" id="send-btn-${i}" onclick="sendEmail(${i}, '${escAttr(r.email_subject)}', '${escAttr(r.email_body)}', '${r.firm_id}')">
+        <button class="btn-send" id="send-btn-${i}" onclick="sendEmail(${i}, '${escAttr(r.email_subject)}', '${escAttr(r.email_body)}', '${r.firm_id}', '${escAttr(r.investor_email||'')}')">
           ✉ Send Draft to Gmail
         </button>
-        <span class="sent-tag" id="sent-${i}">✓ Draft saved to Gmail</span>
+        <span class="sent-tag" id="sent-${i}">✓ Draft saved — <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" style="color:#3fb950">Open Gmail →</a></span>
+        <span class="sent-tag" id="err-${i}" style="color:#f85149"></span>
       </div>
     </div>`).join('');
 
   document.getElementById('brief-content').innerHTML = html;
 }
 
-async function sendEmail(idx, subject, body, firmId) {
-  const btn  = document.getElementById(`send-btn-${idx}`);
-  const tag  = document.getElementById(`sent-${idx}`);
+async function sendEmail(idx, subject, body, firmId, to) {
+  const btn = document.getElementById(`send-btn-${idx}`);
+  const tag = document.getElementById(`sent-${idx}`);
+  const err = document.getElementById(`err-${idx}`);
   btn.disabled = true;
-  btn.textContent = 'Sending...';
+  btn.textContent = 'Saving draft...';
   try {
     const res  = await fetch('/api/send-email', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({subject, body, firm_id: firmId})
+      body: JSON.stringify({subject, body, firm_id: firmId, to})
     });
     const data = await res.json();
-    btn.style.display = 'none';
-    tag.style.display = 'inline-flex';
-    // open Gmail drafts
-    setTimeout(() => window.open('https://mail.google.com/mail/u/0/#drafts','_blank'), 800);
+    if (data.ok) {
+      btn.style.display = 'none';
+      tag.style.display = 'inline-flex';
+    } else {
+      err.textContent = '✗ ' + (data.error || 'Draft failed — check Gmail connection in Settings');
+      err.style.display = 'inline-flex';
+      btn.disabled = false;
+      btn.textContent = '✉ Retry';
+    }
   } catch(e) {
     btn.disabled = false;
     btn.textContent = 'Retry';
