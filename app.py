@@ -57,9 +57,10 @@ def settings_view():
     connected = _gmail_connected()
     cal_connected = _calendar_connected()
     sheets_conn = _sheets_connected()
+    sheets_url = db.get_setting("sheets_spreadsheet_url", "")
     return render_template("settings.html", email=email, permission=permission,
                            connected=connected, cal_connected=cal_connected,
-                           sheets_connected=sheets_conn)
+                           sheets_connected=sheets_conn, sheets_url=sheets_url)
 
 @app.route("/qr")
 def qr_view():
@@ -125,19 +126,33 @@ def _brief_for_firm(firm: dict) -> dict:
     except Exception:
         pass
 
-    # RAG: startup context from Google Sheets
+    # Startup metrics: read directly from Google Sheets if configured
     startup_hits = []
     startup_rag = ""
     try:
-        from memory import search_startup_memory
-        startup_hits = search_startup_memory(f"{firm_name} investor traction metrics revenue growth", limit=4)
-        if startup_hits:
-            startup_rag = "\n".join(
-                f"- [{h.get('source','?')} · {h.get('name','?')}] {h.get('snippet','')[:200]}"
-                for h in startup_hits
-            )
+        spreadsheet_url = db.get_setting("sheets_spreadsheet_url", "")
+        if spreadsheet_url:
+            from sheets_client import fetch_startup_data
+            chunks = fetch_startup_data(spreadsheet_url=spreadsheet_url)
+            if chunks:
+                startup_rag = chunks[0]["text"][:800]
+                startup_hits = [{"source": "googlesheets", "name": c["name"], "snippet": c["text"][:120]} for c in chunks]
     except Exception:
         pass
+
+    # Fallback: try VectorAI memory if direct read failed
+    if not startup_rag:
+        try:
+            from memory import search_startup_memory
+            hits = search_startup_memory(f"{firm_name} investor traction metrics revenue growth", limit=4)
+            if hits:
+                startup_rag = "\n".join(
+                    f"- [{h.get('source','?')} · {h.get('name','?')}] {h.get('snippet','')[:200]}"
+                    for h in hits
+                )
+                startup_hits = hits
+        except Exception:
+            pass
 
     prompt = f"""Sender / firm: {firm_name}
 Their messages:
@@ -218,16 +233,17 @@ def morning_brief():
         return jsonify({"results": []})
 
     # Sync Sheets once before per-firm analysis so RAG has fresh data
-    last_synced_iso = db.get_setting("startup_last_synced_at", "")
     sources_synced = []
     try:
         from sheets_client import fetch_startup_data
         from memory import store_startup_memory
-        chunks = fetch_startup_data(since_iso=last_synced_iso or None)
-        for chunk in chunks:
-            store_startup_memory(chunk["text"], chunk["source"], chunk["name"])
-        if chunks:
-            sources_synced.append("googlesheets")
+        spreadsheet_url = db.get_setting("sheets_spreadsheet_url", "")
+        if spreadsheet_url:
+            chunks = fetch_startup_data(spreadsheet_url=spreadsheet_url)
+            for chunk in chunks:
+                store_startup_memory(chunk["text"], chunk["source"], chunk["name"])
+            if chunks:
+                sources_synced.append("googlesheets")
     except Exception:
         pass
     db.set_setting("startup_last_synced_at", datetime.now(timezone.utc).isoformat())
@@ -349,6 +365,13 @@ def connect_sheets():
         return jsonify({"url": get_connect_link()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sheets-config", methods=["POST"])
+def sheets_config():
+    data = request.json or {}
+    url = data.get("spreadsheet_url", "").strip()
+    db.set_setting("sheets_spreadsheet_url", url)
+    return jsonify({"ok": True})
 
 @app.route("/api/connect-gmail")
 def connect_gmail():

@@ -119,18 +119,26 @@ def fetch_investor_emails(investor_domains: list[str], individual_emails: list[s
 
 def create_draft(to: str, subject: str, body: str) -> dict:
     """Create a Gmail draft on behalf of the founder."""
+    import time
     client = get_client()
     identifier = _get_identifier()
-    # Try draft tool first, fall back to send tool
-    for tool_name in ["gmail_create_draft", "gmail_send_email"]:
+    # ScaleKit's Jsonnet template chokes on certain unicode/special chars — strip to ASCII-safe
+    safe_body = body.encode("ascii", "ignore").decode("ascii")
+    safe_subject = subject.encode("ascii", "ignore").decode("ascii")
+    safe_to = to or identifier  # never send empty to — fallback to self
+
+    last_err = None
+    for attempt in range(2):
         try:
             response = client.actions.execute_tool(
-                tool_name=tool_name,
+                tool_name="gmail_create_draft",
                 identifier=identifier,
                 connection_name=GMAIL_CONNECTION_NAME,
-                tool_input={"to": to, "subject": subject, "body": body},
+                tool_input={"to": safe_to, "subject": safe_subject, "body": safe_body},
             )
-            return {"tool_used": tool_name, **(response.data or {})}
+            return {"tool_used": "gmail_create_draft", **(response.data or {})}
         except Exception as e:
-            last_err = str(e)
-    return {"error": last_err}
+            last_err = e
+            if attempt == 0:
+                time.sleep(1)
+    raise last_err

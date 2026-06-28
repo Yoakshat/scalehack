@@ -1,8 +1,9 @@
 """Google Sheets integration via ScaleKit AgentKit.
 
-Reads spreadsheets from the founder's 'startup' folder and returns
-their content as text chunks for embedding into VectorAI.
+Reads a founder-configured spreadsheet and returns its content
+as text for embedding into LLM prompts.
 """
+import re
 import webbrowser
 from config import (
     SCALEKIT_ENV_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET,
@@ -12,7 +13,6 @@ from gmail_client import get_client
 from profile import get_founder_email
 
 _ACTIVE_STATUSES = {"ACTIVE", "CONNECTOR_STATUS_ACTIVE"}
-STARTUP_FOLDER = "startup"
 
 
 def _get_identifier() -> str:
@@ -20,6 +20,12 @@ def _get_identifier() -> str:
     if not email:
         raise RuntimeError("No founder profile. Go to /settings first.")
     return email
+
+
+def _extract_spreadsheet_id(url_or_id: str) -> str:
+    """Accept either a full Sheets URL or a raw spreadsheet ID."""
+    m = re.search(r"/spreadsheets/d/([a-zA-Z0-9_-]+)", url_or_id)
+    return m.group(1) if m else url_or_id.strip()
 
 
 def sheets_connected() -> bool:
@@ -65,41 +71,14 @@ def get_connect_link() -> str:
     return link.link
 
 
-def _list_startup_files() -> list[dict]:
-    """List spreadsheet files inside the 'startup' folder."""
-    client = get_client()
-    identifier = _get_identifier()
-
-    for tool_name, tool_input in [
-        ("googlesheets_list_files", {"folder_name": STARTUP_FOLDER}),
-        ("googlesheets_list_spreadsheets", {"query": f"'{STARTUP_FOLDER}' in parents"}),
-        ("googledrive_list_files", {"folder_name": STARTUP_FOLDER, "mime_type": "application/vnd.google-apps.spreadsheet"}),
-    ]:
-        try:
-            resp = client.actions.execute_tool(
-                tool_name=tool_name,
-                identifier=identifier,
-                connection_name=SHEETS_CONNECTION_NAME,
-                tool_input=tool_input,
-            )
-            data = resp.data or {}
-            files = data.get("files", data.get("spreadsheets", data.get("items", [])))
-            if isinstance(files, list):
-                return files
-        except Exception:
-            continue
-    return []
-
-
-def _read_sheet(file_id: str, file_name: str) -> str:
+def _read_sheet(spreadsheet_id: str, label: str = "Traction") -> str:
     """Read a spreadsheet's values and return as formatted text."""
     client = get_client()
     identifier = _get_identifier()
 
     for tool_name, tool_input in [
-        ("googlesheets_get_values", {"spreadsheet_id": file_id, "range": "A1:Z100"}),
-        ("googlesheets_read_spreadsheet", {"spreadsheet_id": file_id}),
-        ("googlesheets_read_sheet", {"file_id": file_id, "range": "A1:Z100"}),
+        ("googlesheets_get_values", {"spreadsheet_id": spreadsheet_id, "range": "A1:Z100"}),
+        ("googlesheets_read_spreadsheet", {"spreadsheet_id": spreadsheet_id}),
     ]:
         try:
             resp = client.actions.execute_tool(
@@ -114,32 +93,32 @@ def _read_sheet(file_id: str, file_name: str) -> str:
                 lines = []
                 for row in rows[:50]:
                     if isinstance(row, list):
-                        lines.append(" | ".join(str(c) for c in row if c))
+                        line = " | ".join(str(c) for c in row if c != "")
+                        if line:
+                            lines.append(line)
                     elif isinstance(row, dict):
                         lines.append(" | ".join(f"{k}: {v}" for k, v in row.items()))
-                return f"Sheet: {file_name}\n" + "\n".join(lines)
+                if lines:
+                    return f"Sheet: {label}\n" + "\n".join(lines)
         except Exception:
             continue
     return ""
 
 
-def fetch_startup_data(since_iso: str | None = None) -> list[dict]:
-    """Fetch sheets from the startup folder, optionally delta-filtered by modifiedTime.
+def fetch_startup_data(spreadsheet_url: str | None = None) -> list[dict]:
+    """Fetch data from the configured spreadsheet.
 
     Returns list of {source, name, text} dicts ready for embedding.
+    spreadsheet_url can be a full URL or raw spreadsheet ID.
     """
-    files = _list_startup_files()
-    chunks = []
-    for f in files[:10]:
-        file_id   = f.get("id") or f.get("spreadsheetId") or f.get("file_id", "")
-        file_name = f.get("name") or f.get("title", file_id)
-        if not file_id:
-            continue
-        if since_iso:
-            modified = f.get("modifiedTime") or f.get("modified_time") or f.get("modifiedAt", "")
-            if modified and modified < since_iso:
-                continue
-        text = _read_sheet(file_id, file_name)
-        if text:
-            chunks.append({"source": "googlesheets", "name": file_name, "text": text})
-    return chunks
+    if not spreadsheet_url:
+        return []
+
+    spreadsheet_id = _extract_spreadsheet_id(spreadsheet_url)
+    if not spreadsheet_id:
+        return []
+
+    text = _read_sheet(spreadsheet_id, label="Startup Metrics")
+    if text:
+        return [{"source": "googlesheets", "name": "Startup Metrics", "text": text}]
+    return []

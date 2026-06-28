@@ -103,10 +103,10 @@ input:focus{border-color:var(--gold-line)}
   <!-- GOOGLE SHEETS -->
   <div class="section">
     <div class="section-title">Google Sheets</div>
-    <div class="row">
+    <div class="row" style="margin-bottom:16px">
       <div class="row-label">
         <h3>Google Sheets</h3>
-        <p>Reads your startup metrics spreadsheets to ground AI recommendations in real traction data</p>
+        <p>Reads your startup metrics spreadsheet to ground AI recommendations in real traction data</p>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="status-badge {{ 'on' if sheets_connected else 'off' }}" id="sheets-badge">
@@ -118,6 +118,10 @@ input:focus{border-color:var(--gold-line)}
         {% endif %}
       </div>
     </div>
+    {% if sheets_connected %}
+    <input type="text" id="sheets-url" placeholder="Paste Google Sheets URL or spreadsheet ID" value="{{ sheets_url or '' }}"/>
+    <button class="save-btn" onclick="saveSheetsUrl()">Save Spreadsheet</button>
+    {% endif %}
   </div>
 
   <!-- PERMISSIONS -->
@@ -176,6 +180,13 @@ async function connectCalendar() {
     toast('Error: ' + (data.error || 'unknown'));
     if (btn) { btn.textContent = 'Connect'; btn.disabled = false; }
   }
+}
+
+async function saveSheetsUrl() {
+  const url = document.getElementById('sheets-url')?.value?.trim();
+  if (!url) { toast('Paste a spreadsheet URL first'); return; }
+  await fetch('/api/sheets-config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({spreadsheet_url: url}) });
+  toast('Spreadsheet saved — run morning brief to sync metrics');
 }
 
 async function connectSheets() {
